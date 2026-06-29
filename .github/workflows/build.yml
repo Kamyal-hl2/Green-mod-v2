@@ -3,11 +3,12 @@ name: Build Android Engine
 on:
   push:
     branches: [ main, master ]
-  workflow_dispatch:
+  workflow_dispatch:  # позволяет запускать вручную из вкладки Actions
 
 jobs:
   build-android:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-20.04 # Изменено для совместимости с NDK r10e
+    timeout-minutes: 30   # Прерывание зависших процессов
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -17,48 +18,58 @@ jobs:
           sudo dpkg --add-architecture i386
           sudo apt-get update
           sudo apt-get install -y python3 git build-essential wget unzip \
-            libbz2-dev:i386 libbz2-dev libsdl2-dev libfreetype6-dev \
-            libfontconfig1-dev libopenal-dev libjpeg-dev libpng-dev \
-            libcurl4-gnutls-dev libedit-dev pkg-config g++-multilib libc6-dev-i386
+            libbz2-dev libbz2-dev:i386 libsdl2-dev libfreetype6-dev libfontconfig1-dev \
+            libopenal-dev libjpeg-dev libpng-dev libcurl4-gnutls-dev \
+            libedit-dev pkg-config g++-multilib libc6-dev-i386
 
       - name: Cache NDK r10e
         id: cache-ndk
         uses: actions/cache@v4
         with:
           path: ndk/android-ndk-r10e
-          key: android-ndk-r10e
+          key: android-ndk-r10e-v2 # Индекс изменен для сброса потенциально битого кэша
 
       - name: Download Android NDK r10e
         if: steps.cache-ndk.outputs.cache-hit != 'true'
         run: |
           mkdir -p ndk
           cd ndk
-          wget -q https://dl.google.com/android/repository/android-ndk-r10e-linux-x86_64.zip -O ndk.zip
+          wget -q --timeout=60 --tries=3 https://dl.google.com/android/repository/android-ndk-r10e-linux-x86_64.zip -O ndk.zip
           unzip -q ndk.zip
           rm ndk.zip
+          ls -la
 
       - name: Configure engine with WAF
         working-directory: engine
         run: |
           export ANDROID_NDK_HOME="${{ github.workspace }}/ndk/android-ndk-r10e"
-          # Принудительно указываем пути к 32-битным библиотекам для совместимости
           export CFLAGS="-m32 -I/usr/include"
           export LDFLAGS="-m32 -L/usr/lib/i386-linux-gnu"
-          python3 waf configure -T release --togles --android=armeabi-v7a-hard,4.9,21
+          python3 waf configure -v -T release --togles --android=armeabi-v7a-hard,4.9,21
 
       - name: Build engine
         working-directory: engine
         run: |
           export ANDROID_NDK_HOME="${{ github.workspace }}/ndk/android-ndk-r10e"
-          python3 waf build -j$(nproc)
+          python3 waf build -v -j$(nproc)
 
       - name: Collect built .so files
         run: |
           mkdir -p artifacts
           find engine/build -iname "*.so" -exec cp {} artifacts/ \; 2>/dev/null || true
+          ls -la artifacts/
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: android-binaries
+          name: green-engine-android-so
           path: artifacts/
+          if-no-files-found: warn
+
+      - name: Upload full build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: engine/build/config.log
+          
