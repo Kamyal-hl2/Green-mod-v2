@@ -38,22 +38,36 @@ jobs:
           unzip -q ndk.zip
           rm ndk.zip
 
+      - name: Setup Global Environment Variables
+        run: |
+          echo "ANDROID_NDK_HOME=${{ github.workspace }}/ndk/android-ndk-r10e" >> $GITHUB_ENV
+          echo "PATH=${{ github.workspace }}/ndk/android-ndk-r10e/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin:$PATH" >> $GITHUB_ENV
+          echo "NDK_BIN=${{ github.workspace }}/ndk/android-ndk-r10e/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin" >> $GITHUB_ENV
+          echo "SYSROOT=${{ github.workspace }}/ndk/android-ndk-r10e/platforms/android-21/arch-arm" >> $GITHUB_ENV
+
+      - name: Build bzip2 for Android (with fPIC)
+        run: |
+          wget -q https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz
+          tar -xzf bzip2-1.0.8.tar.gz
+          cd bzip2-1.0.8
+          make libbz2.a \
+            CC="$NDK_BIN/arm-linux-androideabi-gcc --sysroot=$SYSROOT" \
+            AR="$NDK_BIN/arm-linux-androideabi-ar" \
+            RANLIB="$NDK_BIN/arm-linux-androideabi-ranlib" \
+            CFLAGS="-fPIC -O2 -Wall -Winline -D_FILE_OFFSET_BITS=64"
+          
+          mkdir -p ${{ github.workspace }}/engine/lib/android/arm
+          cp libbz2.a ${{ github.workspace }}/engine/lib/android/arm/
+
       - name: Configure WAF
         working-directory: engine
         run: |
-          export ANDROID_NDK_HOME="${{ github.workspace }}/ndk/android-ndk-r10e"
-          export PATH=$ANDROID_NDK_HOME/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin:$PATH
-          # Очистка флагов хост-системы
-          unset CFLAGS
-          unset LDFLAGS
-          # Запуск конфигурации без лишних тестов
+          unset CFLAGS CXXFLAGS LDFLAGS
           python3 waf configure -v -T release --togles --android=armeabi-v7a-hard,4.9,21
 
       - name: Build engine
         working-directory: engine
         run: |
-          export ANDROID_NDK_HOME="${{ github.workspace }}/ndk/android-ndk-r10e"
-          export PATH=$ANDROID_NDK_HOME/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin:$PATH
           python3 waf build -v -j$(nproc)
 
       - name: Collect artifacts
