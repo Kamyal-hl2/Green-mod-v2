@@ -45,7 +45,7 @@ jobs:
           echo "NDK_BIN=${{ github.workspace }}/ndk/android-ndk-r10e/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin" >> $GITHUB_ENV
           echo "SYSROOT=${{ github.workspace }}/ndk/android-ndk-r10e/platforms/android-21/arch-arm" >> $GITHUB_ENV
 
-      - name: Build bzip2 for Android (with fPIC)
+      - name: Build bzip2 for Android
         run: |
           wget -q https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz
           tar -xzf bzip2-1.0.8.tar.gz
@@ -58,6 +58,17 @@ jobs:
           
           mkdir -p ${{ github.workspace }}/engine/lib/android/arm
           cp libbz2.a ${{ github.workspace }}/engine/lib/android/arm/
+
+      - name: Setup Thirdparty Prebuilts
+        run: |
+          mkdir -p ${{ github.workspace }}/engine/lib/android/arm
+          
+          ar rcs ${{ github.workspace }}/engine/lib/android/arm/librt.a
+          
+          git clone https://github.com/nillerusr/a-b-c.git prebuilts --depth=1
+          
+          cp -rn prebuilts/lib/armeabi-v7a-hard/* ${{ github.workspace }}/engine/lib/android/arm/ 2>/dev/null || true
+          cp -rn prebuilts/lib/armeabi-v7a/* ${{ github.workspace }}/engine/lib/android/arm/ 2>/dev/null || true
 
       - name: Configure WAF
         working-directory: engine
@@ -83,7 +94,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload logs
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: build-logs
