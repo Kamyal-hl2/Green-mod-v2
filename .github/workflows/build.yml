@@ -8,10 +8,17 @@ on:
 jobs:
   build-android:
     runs-on: ubuntu-22.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
-      - name: Checkout repository
+      - name: Checkout main repository
         uses: actions/checkout@v4
+
+      - name: Checkout prebuilts (a-b-c)
+        uses: actions/checkout@v4
+        with:
+          repository: nillerusr/a-b-c
+          path: prebuilts
+          depth: 1
 
       - name: Install dependencies
         run: |
@@ -63,12 +70,12 @@ jobs:
         run: |
           mkdir -p ${{ github.workspace }}/engine/lib/android/arm
           
-          ar rcs ${{ github.workspace }}/engine/lib/android/arm/librt.a
+          # Создание файла librt.a с использованием ARM-архиватора из NDK
+          $NDK_BIN/arm-linux-androideabi-ar rcs ${{ github.workspace }}/engine/lib/android/arm/librt.a
           
-          git clone https://github.com/nillerusr/a-b-c.git prebuilts --depth=1
-          
-          cp -rn prebuilts/lib/armeabi-v7a-hard/* ${{ github.workspace }}/engine/lib/android/arm/ 2>/dev/null || true
-          cp -rn prebuilts/lib/armeabi-v7a/* ${{ github.workspace }}/engine/lib/android/arm/ 2>/dev/null || true
+          # Копирование библиотек. Ошибки не подавляются для контроля структуры директорий
+          cp -rn ${{ github.workspace }}/prebuilts/lib/armeabi-v7a-hard/* ${{ github.workspace }}/engine/lib/android/arm/
+          cp -rn ${{ github.workspace }}/prebuilts/lib/armeabi-v7a/* ${{ github.workspace }}/engine/lib/android/arm/
 
       - name: Configure WAF
         working-directory: engine
@@ -94,16 +101,8 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload logs
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: build-logs
           path: engine/build/config.log
-
-         - name: Checkout prebuilts
-           uses: actions/checkout@v4
-           with:
-             repository: nillerusr/a-b-c
-             path: prebuilts
-             depth: 1
-                         
