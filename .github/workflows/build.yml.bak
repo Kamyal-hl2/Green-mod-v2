@@ -13,10 +13,10 @@ jobs:
       - name: Checkout main repository
         uses: actions/checkout@v4
 
-      - name: Checkout prebuilts
+      - name: Checkout prebuilts (a-b-c)
         uses: actions/checkout@v4
         with:
-          repository: Kamyal-hl2/green-engine-v1
+          repository: nillerusr/a-b-c
           path: prebuilts
           depth: 1
 
@@ -73,9 +73,9 @@ jobs:
           # Создание файла librt.a с использованием ARM-архиватора из NDK
           $NDK_BIN/arm-linux-androideabi-ar rcs ${{ github.workspace }}/engine/lib/android/arm/librt.a
           
-          # Копирование библиотек из указанного репозитория (подавление ошибок вывода возвращено для обхода отсутствующих архитектурных папок)
-          cp -rn ${{ github.workspace }}/prebuilts/lib/armeabi-v7a-hard/* ${{ github.workspace }}/engine/lib/android/arm/ 2>/dev/null || true
-          cp -rn ${{ github.workspace }}/prebuilts/lib/armeabi-v7a/* ${{ github.workspace }}/engine/lib/android/arm/ 2>/dev/null || true
+          # Копирование библиотек. Ошибки не подавляются для контроля структуры директорий
+          cp -rn ${{ github.workspace }}/prebuilts/lib/armeabi-v7a-hard/* ${{ github.workspace }}/engine/lib/android/arm/
+          cp -rn ${{ github.workspace }}/prebuilts/lib/armeabi-v7a/* ${{ github.workspace }}/engine/lib/android/arm/
 
       - name: Configure WAF
         working-directory: engine
@@ -106,4 +106,3 @@ jobs:
         with:
           name: build-logs
           path: engine/build/config.log
-          
