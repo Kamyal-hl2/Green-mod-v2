@@ -140,30 +140,30 @@ jobs:
         id: cache-ndk
         uses: actions/cache@v4
         with:
-          path: ndk/android-ndk-r10e
-          key: android-ndk-r10e-v3
+          path: ndk/android-ndk-r19c
+          key: android-ndk-r19c-v1
 
       - name: Download NDK
         if: steps.cache-ndk.outputs.cache-hit != 'true'
         run: |
           mkdir -p ndk && cd ndk
-          wget -q --timeout=120 --tries=3 https://dl.google.com/android/repository/android-ndk-r10e-linux-x86_64.zip -O ndk.zip
+          wget -q --timeout=120 --tries=3 https://dl.google.com/android/repository/android-ndk-r19c-linux-x86_64.zip -O ndk.zip
           unzip -q ndk.zip && rm ndk.zip
 
       - name: Setup environment
         run: |
-          echo "ANDROID_NDK_HOME=${{ github.workspace }}/ndk/android-ndk-r10e" >> $GITHUB_ENV
-          echo "NDK_BIN=${{ github.workspace }}/ndk/android-ndk-r10e/toolchains/aarch64-linux-android-4.9/prebuilt/linux-x86_64/bin" >> $GITHUB_ENV
-          echo "SYSROOT=${{ github.workspace }}/ndk/android-ndk-r10e/platforms/android-21/arch-arm64" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=${{ github.workspace }}/ndk/android-ndk-r19c" >> $GITHUB_ENV
+          echo "NDK_BIN=${{ github.workspace }}/ndk/android-ndk-r19c/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_ENV
+          echo "SYSROOT=${{ github.workspace }}/ndk/android-ndk-r19c/platforms/android-21/arch-arm64" >> $GITHUB_ENV
 
       - name: Build bzip2
         run: |
           wget -q https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz
           tar -xzf bzip2-1.0.8.tar.gz && cd bzip2-1.0.8
           make libbz2.a \
-            CC="$NDK_BIN/aarch64-linux-android-gcc --sysroot=$SYSROOT" \
-            AR="$NDK_BIN/aarch64-linux-android-ar" \
-            RANLIB="$NDK_BIN/aarch64-linux-android-ranlib" \
+            CC="$NDK_BIN/aarch64-linux-android21-clang --sysroot=$SYSROOT" \
+            AR="$NDK_BIN/llvm-ar" \
+            RANLIB="$NDK_BIN/llvm-ranlib" \
             CFLAGS="-fPIC -O2 -Wall -Winline -D_FILE_OFFSET_BITS=64"
           mkdir -p ${{ github.workspace }}/engine/lib/android/aarch64
           cp libbz2.a ${{ github.workspace }}/engine/lib/android/aarch64/
@@ -182,7 +182,7 @@ jobs:
         working-directory: engine
         run: |
           unset CFLAGS CXXFLAGS LDFLAGS
-          python3 waf configure -v -T release --togles --android=aarch64,4.9,21 --disable-warns
+          python3 waf configure -v -T release --togles --android=aarch64,clang,21 --disable-warns
 
       - name: Build engine
         working-directory: engine
