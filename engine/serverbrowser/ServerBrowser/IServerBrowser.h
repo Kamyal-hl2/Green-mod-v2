@@ -16,6 +16,10 @@ public:
 	virtual void JoinGame(const char *server, const char *password) = 0;
 	virtual void CreateServerGameUI(void) = 0;
 	virtual void CloseExistingGameUI(void) = 0;
+	virtual const char *GetMapFriendlyNameAndGameType(const char *pszMapName, char *szFriendlyMapName, int cchFriendlyName) = 0;
+	virtual void SetWorkshopEnabled(bool bManaged) = 0;
+	virtual void AddWorkshopSubscribedMap(const char *pszMapName) = 0;
+	virtual void RemoveWorkshopSubscribedMap(const char *pszMapName) = 0;
 };
 
 #define SERVERBROWSER_INTERFACE_VERSION "ServerBrowser003"
