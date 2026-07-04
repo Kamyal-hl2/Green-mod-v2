@@ -404,6 +404,10 @@ def check_deps(conf):
 			if conf.options.OPUS:
 				conf.check_cfg(package='opus', uselib_store='OPUS', args=['--cflags', '--libs'])
 	else:
+		# Add library search path for Android prebuilts
+		android_libpath = os.path.abspath(os.path.join('lib', 'android', conf.env.DEST_CPU))
+		conf.env.LIBPATH = [android_libpath] + conf.env.LIBPATH
+
 		conf.check(lib='SDL2', uselib_store='SDL2')
 		conf.check(lib='freetype2', uselib_store='FT2')
 		conf.check(lib='jpeg', uselib_store='JPEG', define_name='HAVE_JPEG')
