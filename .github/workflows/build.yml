@@ -15,16 +15,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 1
 
-      - name: Verify submodules
+      - name: Init submodules
         run: |
+          cd engine
+          # Инициализируем thirdparty и ivp (lib скачиваем отдельно)
+          git submodule update --init thirdparty ivp
           echo "=== thirdparty ==="
-          ls engine/thirdparty/ | head -5 || echo "EMPTY!"
+          ls thirdparty/ | head -5 || echo "EMPTY!"
           echo "=== ivp ==="
-          ls engine/ivp/ | head -5 || echo "EMPTY!"
+          ls ivp/ | head -5 || echo "EMPTY!"
 
       - name: Install dependencies
         run: |
@@ -117,9 +117,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 1
+
+      - name: Init submodules
+        run: |
+          cd engine
+          git submodule update --init thirdparty ivp
 
       - name: Install dependencies
         run: |
