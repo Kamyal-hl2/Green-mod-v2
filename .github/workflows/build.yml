@@ -154,14 +154,14 @@ jobs:
         run: |
           echo "ANDROID_NDK_HOME=${{ github.workspace }}/ndk/android-ndk-r19c" >> $GITHUB_ENV
           echo "NDK_BIN=${{ github.workspace }}/ndk/android-ndk-r19c/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_ENV
-          echo "SYSROOT=${{ github.workspace }}/ndk/android-ndk-r19c/platforms/android-21/arch-arm64" >> $GITHUB_ENV
+          echo "SYSROOT=${{ github.workspace }}/ndk/android-ndk-r19c/toolchains/llvm/prebuilt/linux-x86_64/sysroot" >> $GITHUB_ENV
 
       - name: Build bzip2
         run: |
           wget -q https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz
           tar -xzf bzip2-1.0.8.tar.gz && cd bzip2-1.0.8
           make libbz2.a \
-            CC="$NDK_BIN/aarch64-linux-android21-clang --sysroot=$SYSROOT" \
+            CC="$NDK_BIN/aarch64-linux-android21-clang" \
             AR="$NDK_BIN/llvm-ar" \
             RANLIB="$NDK_BIN/llvm-ranlib" \
             CFLAGS="-fPIC -O2 -Wall -Winline -D_FILE_OFFSET_BITS=64"
