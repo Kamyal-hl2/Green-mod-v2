@@ -67,6 +67,15 @@ jobs:
           mkdir -p ${{ github.workspace }}/engine/lib/android/arm
           cp libbz2.a ${{ github.workspace }}/engine/lib/android/arm/
 
+      - name: Setup library symlinks
+        run: |
+          # wscript ищет библиотеки в lib/android/arm/, но они в lib/armeabi-v7a/
+          mkdir -p engine/lib/android/arm
+          cp engine/lib/armeabi-v7a/*.so engine/lib/android/arm/ 2>/dev/null || true
+          cp engine/lib/armeabi-v7a/*.a engine/lib/android/arm/ 2>/dev/null || true
+          echo "=== lib/android/arm ==="
+          ls engine/lib/android/arm/ | head -10
+
       - name: Configure WAF
         working-directory: engine
         run: |
@@ -151,6 +160,14 @@ jobs:
           mkdir -p ${{ github.workspace }}/engine/lib/android/arm64
           cp libbz2.a ${{ github.workspace }}/engine/lib/android/arm64/
 
+      - name: Setup library symlinks
+        run: |
+          mkdir -p engine/lib/android/arm64
+          cp engine/lib/arm64-v8a/*.so engine/lib/android/arm64/ 2>/dev/null || true
+          cp engine/lib/arm64-v8a/*.a engine/lib/android/arm64/ 2>/dev/null || true
+          echo "=== lib/android/arm64 ==="
+          ls engine/lib/android/arm64/ | head -10
+
       - name: Configure WAF
         working-directory: engine
         run: |
@@ -200,7 +217,7 @@ jobs:
       - name: Install depot_tools
         run: |
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-          echo "${{ github.workspace }}/depot_tools" >> $GITHUB_ENV
+          echo "DEPOT_TOOLS=${{ github.workspace }}/depot_tools" >> $GITHUB_ENV
           echo "PATH=${{ github.workspace }}/depot_tools:$PATH" >> $GITHUB_ENV
 
       - name: Fetch Chromium source
@@ -265,7 +282,7 @@ jobs:
       - name: Install depot_tools
         run: |
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-          echo "${{ github.workspace }}/depot_tools" >> $GITHUB_ENV
+          echo "DEPOT_TOOLS=${{ github.workspace }}/depot_tools" >> $GITHUB_ENV
           echo "PATH=${{ github.workspace }}/depot_tools:$PATH" >> $GITHUB_ENV
 
       - name: Fetch Chromium source
