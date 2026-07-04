@@ -19,12 +19,14 @@ jobs:
       - name: Init submodules
         run: |
           cd engine
-          # Инициализируем thirdparty и ivp (lib скачиваем отдельно)
-          git submodule update --init thirdparty ivp
+          # Клонируем thirdparty и ivp напрямую (engine/.gitmodules не виден из корня)
+          rm -rf thirdparty ivp
+          git clone --depth 1 https://github.com/nillerusr/source-thirdparty.git thirdparty
+          git clone --depth 1 https://github.com/nillerusr/source-physics.git ivp
           echo "=== thirdparty ==="
-          ls thirdparty/ | head -5 || echo "EMPTY!"
+          ls thirdparty/ | head -5
           echo "=== ivp ==="
-          ls ivp/ | head -5 || echo "EMPTY!"
+          ls ivp/ | head -5
 
       - name: Install dependencies
         run: |
@@ -121,7 +123,9 @@ jobs:
       - name: Init submodules
         run: |
           cd engine
-          git submodule update --init thirdparty ivp
+          rm -rf thirdparty ivp
+          git clone --depth 1 https://github.com/nillerusr/source-thirdparty.git thirdparty
+          git clone --depth 1 https://github.com/nillerusr/source-physics.git ivp
 
       - name: Install dependencies
         run: |
