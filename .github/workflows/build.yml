@@ -165,8 +165,8 @@ jobs:
             AR="$NDK_BIN/aarch64-linux-android-ar" \
             RANLIB="$NDK_BIN/aarch64-linux-android-ranlib" \
             CFLAGS="-fPIC -O2 -Wall -Winline -D_FILE_OFFSET_BITS=64"
-          mkdir -p ${{ github.workspace }}/engine/lib/android/arm64
-          cp libbz2.a ${{ github.workspace }}/engine/lib/android/arm64/
+          mkdir -p ${{ github.workspace }}/engine/lib/android/aarch64
+          cp libbz2.a ${{ github.workspace }}/engine/lib/android/aarch64/
 
       - name: Download prebuilt libraries
         run: |
