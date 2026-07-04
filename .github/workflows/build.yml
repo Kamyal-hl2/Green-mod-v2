@@ -69,12 +69,12 @@ jobs:
 
       - name: Download prebuilt libraries
         run: |
-          # Скачиваем статические библиотеки из source-engine-libs
-          PREBUILTS_URL="https://raw.githubusercontent.com/nillerusr/source-engine-libs/main/android/arm"
+          # Клонируем source-engine-libs и копируем нужные библиотеки
+          git clone --depth 1 https://github.com/nillerusr/source-engine-libs.git /tmp/prebuilts
           mkdir -p engine/lib/android/arm
-          for lib in libSDL2.so libfreetype2.a libjpeg.a libpng.a libcurl.a libssl.a libcrypto.a libopus.a libunwind.a libandroid_support.a libexpat.a; do
-            wget -q "$PREBUILTS_URL/$lib" -O "engine/lib/android/arm/$lib" 2>/dev/null || echo "WARN: $lib not found"
-          done
+          cp /tmp/prebuilts/android/arm/*.a engine/lib/android/arm/ 2>/dev/null || true
+          cp /tmp/prebuilts/android/arm/*.so engine/lib/android/arm/ 2>/dev/null || true
+          rm -rf /tmp/prebuilts
           echo "=== lib/android/arm ==="
           ls -lh engine/lib/android/arm/
 
@@ -164,11 +164,11 @@ jobs:
 
       - name: Download prebuilt libraries
         run: |
-          PREBUILTS_URL="https://raw.githubusercontent.com/nillerusr/source-engine-libs/main/android/aarch64"
+          git clone --depth 1 https://github.com/nillerusr/source-engine-libs.git /tmp/prebuilts
           mkdir -p engine/lib/android/arm64
-          for lib in libSDL2.so libfreetype2.a libfreetype.a libjpeg.a libpng.a libcurl.a libssl.a libcrypto.a libopus.a libunwind.a libandroid_support.a libbz2.a; do
-            wget -q "$PREBUILTS_URL/$lib" -O "engine/lib/android/arm64/$lib" 2>/dev/null || echo "WARN: $lib not found"
-          done
+          cp /tmp/prebuilts/android/aarch64/*.a engine/lib/android/arm64/ 2>/dev/null || true
+          cp /tmp/prebuilts/android/aarch64/*.so engine/lib/android/arm64/ 2>/dev/null || true
+          rm -rf /tmp/prebuilts
           echo "=== lib/android/arm64 ==="
           ls -lh engine/lib/android/arm64/
 
