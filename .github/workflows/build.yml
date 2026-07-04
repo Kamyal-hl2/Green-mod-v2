@@ -171,12 +171,12 @@ jobs:
       - name: Download prebuilt libraries
         run: |
           git clone --depth 1 https://github.com/nillerusr/source-engine-libs.git /tmp/prebuilts
-          mkdir -p engine/lib/android/arm64
-          cp /tmp/prebuilts/android/aarch64/*.a engine/lib/android/arm64/ 2>/dev/null || true
-          cp /tmp/prebuilts/android/aarch64/*.so engine/lib/android/arm64/ 2>/dev/null || true
+          mkdir -p engine/lib/android/aarch64
+          cp /tmp/prebuilts/android/aarch64/*.a engine/lib/android/aarch64/ 2>/dev/null || true
+          cp /tmp/prebuilts/android/aarch64/*.so engine/lib/android/aarch64/ 2>/dev/null || true
           rm -rf /tmp/prebuilts
-          echo "=== lib/android/arm64 ==="
-          ls -lh engine/lib/android/arm64/
+          echo "=== lib/android/aarch64 ==="
+          ls -lh engine/lib/android/aarch64/
 
       - name: Configure WAF
         working-directory: engine
