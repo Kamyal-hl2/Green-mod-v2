@@ -1,25 +1,11 @@
-// IServerBrowser.h - Server browser interface
+// IServerBrowser.h - Server browser interface stub
 #ifndef ISERVERBROWSER_H
 #define ISERVERBROWSER_H
-
-#include "platform.h"
 
 class IServerBrowser
 {
 public:
 	virtual ~IServerBrowser() {}
-	virtual void Open(void) = 0;
-	virtual void Close(void) = 0;
-	virtual bool IsActiveDialog(void) = 0;
-	virtual bool JoinGame(void) = 0;
-	virtual void JoinGame(unsigned int serverID) = 0;
-	virtual void JoinGame(const char *server, const char *password) = 0;
-	virtual void CreateServerGameUI(void) = 0;
-	virtual void CloseExistingGameUI(void) = 0;
-	virtual const char *GetMapFriendlyNameAndGameType(const char *pszMapName, char *szFriendlyMapName, int cchFriendlyName) = 0;
-	virtual void SetWorkshopEnabled(bool bManaged) = 0;
-	virtual void AddWorkshopSubscribedMap(const char *pszMapName) = 0;
-	virtual void RemoveWorkshopSubscribedMap(const char *pszMapName) = 0;
 };
 
 #define SERVERBROWSER_INTERFACE_VERSION "ServerBrowser003"
