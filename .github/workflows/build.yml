@@ -136,6 +136,25 @@ jobs:
             libopenal-dev libjpeg-dev libpng-dev libcurl4-gnutls-dev \
             libedit-dev pkg-config g++-multilib libc6-dev-i386
 
+      - name: Cache NDK r19c
+        id: cache-ndk-r19c
+        uses: actions/cache@v4
+        with:
+          path: ndk/android-ndk-r19c
+          key: android-ndk-r19c-v2
+
+      - name: Download NDK r19c
+        if: steps.cache-ndk-r19c.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ndk && cd ndk
+          echo "Downloading NDK r19c (~786MB)..."
+          wget --timeout=600 --tries=3 https://dl.google.com/android/repository/android-ndk-r19c-linux-x86_64.zip -O ndk.zip
+          echo "Extracting..."
+          unzip -q ndk.zip
+          rm ndk.zip
+          echo "=== Verify ==="
+          ls toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang
+
       - name: Setup environment
         run: |
           echo "ANDROID_NDK_HOME=${{ github.workspace }}/ndk/android-ndk-r19c" >> $GITHUB_ENV
