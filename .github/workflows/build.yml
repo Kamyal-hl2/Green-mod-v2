@@ -230,7 +230,10 @@ jobs:
             lsb-release software-properties-common gnupg \
             libnss3 libatk-bridge2.0-0 libdrm2 libxcomposite1 \
             libxdamage1 libxrandr2 libgbm1 libasound2 libpangocairo-1.0-0 \
-            libgtk-3-0 ninja-build libdbus-1-dev libglib2.0-dev
+            libgtk-3-0 ninja-build libdbus-1-dev libglib2.0-dev \
+            libnss3-dev libnspr4-dev libpci-dev libpulse-dev \
+            libxss-dev libxtst-dev libxcursor-dev libxrandr-dev \
+            libxi-dev libxcomposite-dev libxdamage-dev libxfixes-dev
 
       - name: Install depot_tools
         run: |
@@ -306,7 +309,10 @@ jobs:
             lsb-release software-properties-common gnupg \
             libnss3 libatk-bridge2.0-0 libdrm2 libxcomposite1 \
             libxdamage1 libxrandr2 libgbm1 libasound2 libpangocairo-1.0-0 \
-            libgtk-3-0 ninja-build libdbus-1-dev libglib2.0-dev
+            libgtk-3-0 ninja-build libdbus-1-dev libglib2.0-dev \
+            libnss3-dev libnspr4-dev libpci-dev libpulse-dev \
+            libxss-dev libxtst-dev libxcursor-dev libxrandr-dev \
+            libxi-dev libxcomposite-dev libxdamage-dev libxfixes-dev
 
       - name: Install depot_tools
         run: |
