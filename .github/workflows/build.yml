@@ -229,7 +229,7 @@ jobs:
             lsb-release software-properties-common gnupg \
             libnss3 libatk-bridge2.0-0 libdrm2 libxcomposite1 \
             libxdamage1 libxrandr2 libgbm1 libasound2 libpangocairo-1.0-0 \
-            libgtk-3-0 ninja-build
+            libgtk-3-0 ninja-build libdbus-1-dev libglib2.0-dev
 
       - name: Install depot_tools
         run: |
@@ -305,7 +305,7 @@ jobs:
             lsb-release software-properties-common gnupg \
             libnss3 libatk-bridge2.0-0 libdrm2 libxcomposite1 \
             libxdamage1 libxrandr2 libgbm1 libasound2 libpangocairo-1.0-0 \
-            libgtk-3-0 ninja-build
+            libgtk-3-0 ninja-build libdbus-1-dev libglib2.0-dev
 
       - name: Install depot_tools
         run: |
@@ -316,18 +316,6 @@ jobs:
       - name: Fetch Chromium source
         run: |
           mkdir -p chromium && cd chromium
-          cat > .gclient << 'GCEOF'
-          solutions = [
-            {
-              "name": "src",
-              "url": "https://chromium.googlesource.com/chromium/src.git",
-              "managed": False,
-              "custom_deps": {},
-              "custom_vars": {},
-            },
-          ]
-          target_os = ["android"]
-          GCEOF
           fetch --nohooks --no-history chromium
           cat > .gclient << 'GCEOF2'
           solutions = [
