@@ -147,7 +147,7 @@ jobs:
         if: steps.cache-ndk.outputs.cache-hit != 'true'
         run: |
           mkdir -p ndk && cd ndk
-          wget -q --timeout=300 --tries=5 https://dl.google.com/android/repository/android-ndk-r19c-linux-x86_64.zip -O ndk.zip
+          wget -q --timeout=120 --tries=3 https://dl.google.com/android/repository/android-ndk-r19c-linux-x86_64.zip -O ndk.zip
           unzip -q ndk.zip && rm ndk.zip
 
       - name: Setup environment
@@ -240,19 +240,19 @@ jobs:
         run: |
           cd chromium/src
           cat > args.gn << 'EOF'
-target_os = "android"
-target_cpu = "arm"
-is_debug = false
-is_component_build = false
-symbol_level = 0
-enable_nacl = false
-proprietary_codecs = true
-ffmpeg_branding = "Chrome"
-use_openh264 = false
-is_clang = true
-treat_warnings_as_errors = false
-use_sysroot = false
-EOF
+          target_os = "android"
+          target_cpu = "arm"
+          is_debug = false
+          is_component_build = false
+          symbol_level = 0
+          enable_nacl = false
+          proprietary_codecs = true
+          ffmpeg_branding = "Chrome"
+          use_openh264 = false
+          is_clang = true
+          treat_warnings_as_errors = false
+          use_sysroot = false
+          EOF
           gn gen out/arm --args="$(cat args.gn)"
 
       - name: Build Chromium
@@ -305,19 +305,19 @@ EOF
         run: |
           cd chromium/src
           cat > args.gn << 'EOF'
-target_os = "android"
-target_cpu = "arm64"
-is_debug = false
-is_component_build = false
-symbol_level = 0
-enable_nacl = false
-proprietary_codecs = true
-ffmpeg_branding = "Chrome"
-use_openh264 = false
-is_clang = true
-treat_warnings_as_errors = false
-use_sysroot = false
-EOF
+          target_os = "android"
+          target_cpu = "arm64"
+          is_debug = false
+          is_component_build = false
+          symbol_level = 0
+          enable_nacl = false
+          proprietary_codecs = true
+          ffmpeg_branding = "Chrome"
+          use_openh264 = false
+          is_clang = true
+          treat_warnings_as_errors = false
+          use_sysroot = false
+          EOF
           gn gen out/arm64 --args="$(cat args.gn)"
 
       - name: Build Chromium
