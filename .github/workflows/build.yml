@@ -147,8 +147,10 @@ jobs:
         if: steps.cache-ndk-r19c.outputs.cache-hit != 'true'
         run: |
           mkdir -p ndk && cd ndk
-          echo "Downloading NDK r19c from GitHub Release..."
-          curl -L -o ndk.zip "https://github.com/Kamyal-hl2/green-engine-v1/releases/download/ndk-r19c/android-ndk-r19c-linux-x86_64.zip"
+          echo "Getting download URL from GitHub API..."
+          DOWNLOAD_URL=$(curl -sL -H "Authorization: token ${{ github.token }}" "https://api.github.com/repos/${{ github.repository }}/releases/tags/ndk-r19c" | python3 -c "import json,sys; assets=json.load(sys.stdin).get('assets',[]); print(assets[0]['browser_download_url'] if assets else '')")
+          echo "Downloading NDK r19c from: $DOWNLOAD_URL"
+          curl -L --connect-timeout 30 --max-time 600 -o ndk.zip "$DOWNLOAD_URL"
           ls -lh ndk.zip
           echo "Extracting..."
           unzip -q ndk.zip
