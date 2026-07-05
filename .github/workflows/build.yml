@@ -391,21 +391,22 @@ jobs:
 
       - name: Prepare jniLibs
         run: |
+          echo "=== Checking engine-armv7a ==="
+          ls -la engine-armv7a/ | head -5
+          find engine-armv7a -name "*.so" | head -5
+
           # armeabi-v7a
           mkdir -p launcher/src/main/jniLibs/armeabi-v7a
-          cp engine-armv7a/*.so launcher/src/main/jniLibs/armeabi-v7a/ 2>/dev/null || true
-          # Заменяем заглушку Chromium настоящим (если есть)
-          cp chromium-armv7a/libwebviewchromium.so launcher/src/main/jniLibs/armeabi-v7a/ 2>/dev/null || true
+          find engine-armv7a -name "*.so" -exec cp {} launcher/src/main/jniLibs/armeabi-v7a/ \; 2>/dev/null || true
 
           # arm64-v8a
           mkdir -p launcher/src/main/jniLibs/arm64-v8a
-          cp engine-arm64/*.so launcher/src/main/jniLibs/arm64-v8a/ 2>/dev/null || true
-          cp chromium-arm64/libwebviewchromium.so launcher/src/main/jniLibs/arm64-v8a/ 2>/dev/null || true
+          find engine-arm64 -name "*.so" -exec cp {} launcher/src/main/jniLibs/arm64-v8a/ \; 2>/dev/null || true
 
           echo "=== armv7a ==="
-          ls -lh launcher/src/main/jniLibs/armeabi-v7a/
+          ls -lh launcher/src/main/jniLibs/armeabi-v7a/ | head -5
           echo "=== arm64 ==="
-          ls -lh launcher/src/main/jniLibs/arm64-v8a/
+          ls -lh launcher/src/main/jniLibs/arm64-v8a/ | head -5
 
       - name: Prepare garrysmod assets
         run: |
