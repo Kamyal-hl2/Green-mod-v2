@@ -147,8 +147,8 @@ jobs:
         if: steps.cache-ndk-r19c.outputs.cache-hit != 'true'
         run: |
           mkdir -p ndk && cd ndk
-          echo "Downloading NDK r19c (~786MB)..."
-          wget --timeout=600 --tries=3 https://dl.google.com/android/repository/android-ndk-r19c-linux-x86_64.zip -O ndk.zip
+          echo "Downloading NDK r19c from GitHub Release..."
+          wget -q --timeout=600 --tries=3 "https://github.com/Kamyal-hl2/green-engine-v1/releases/download/ndk-r19c/android-ndk-r19c-linux-x86_64.zip" -O ndk.zip
           echo "Extracting..."
           unzip -q ndk.zip
           rm ndk.zip
@@ -252,7 +252,7 @@ jobs:
           ]
           target_os = ["android"]
           GCEOF
-          fetch --nohooks --no-history
+          fetch --nohooks --no-history src
           cd src && gclient runhooks
 
       - name: Configure Chromium for Android ARM
@@ -329,7 +329,7 @@ jobs:
           ]
           target_os = ["android"]
           GCEOF
-          fetch --nohooks --no-history
+          fetch --nohooks --no-history src
           cd src && gclient runhooks
 
       - name: Configure Chromium for Android ARM64
