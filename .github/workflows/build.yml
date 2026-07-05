@@ -163,7 +163,10 @@ jobs:
           echo "ANDROID_NDK_HOME=${{ github.workspace }}/ndk/android-ndk-r19c" >> $GITHUB_ENV
           echo "NDK_BIN=${{ github.workspace }}/ndk/android-ndk-r19c/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_ENV
           echo "SYSROOT=${{ github.workspace }}/ndk/android-ndk-r19c/toolchains/llvm/prebuilt/linux-x86_64/sysroot" >> $GITHUB_ENV
-          echo "=== Verify clang ==="
+
+      - name: Verify NDK
+        run: |
+          echo "NDK_BIN=$NDK_BIN"
           ls $NDK_BIN/aarch64-linux-android21-clang
 
       - name: Build bzip2
@@ -286,7 +289,7 @@ jobs:
       - name: Build Chromium
         run: |
           cd chromium/src
-          autoninja -C out/arm webview_renderer_shell_apk
+          autoninja -C out/arm content_shell_apk
 
       - name: Extract .so files
         run: |
@@ -369,7 +372,7 @@ jobs:
       - name: Build Chromium
         run: |
           cd chromium/src
-          autoninja -C out/arm64 webview_renderer_shell_apk
+          autoninja -C out/arm64 content_shell_apk
 
       - name: Extract .so files
         run: |
