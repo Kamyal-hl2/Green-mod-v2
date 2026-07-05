@@ -148,7 +148,8 @@ jobs:
         run: |
           mkdir -p ndk && cd ndk
           echo "Downloading NDK r19c from GitHub Release..."
-          wget -L -q --timeout=600 --tries=3 "https://github.com/Kamyal-hl2/green-engine-v1/releases/download/ndk-r19c/android-ndk-r19c-linux-x86_64.zip" -O ndk.zip
+          curl -L -o ndk.zip "https://github.com/Kamyal-hl2/green-engine-v1/releases/download/ndk-r19c/android-ndk-r19c-linux-x86_64.zip"
+          ls -lh ndk.zip
           echo "Extracting..."
           unzip -q ndk.zip
           rm ndk.zip
