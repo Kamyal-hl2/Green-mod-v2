@@ -147,7 +147,7 @@ jobs:
         if: steps.cache-ndk.outputs.cache-hit != 'true'
         run: |
           mkdir -p ndk && cd ndk
-          wget -q --timeout=120 --tries=3 https://dl.google.com/android/repository/android-ndk-r19c-linux-x86_64.zip -O ndk.zip
+          wget -q --timeout=300 --tries=5 https://dl.google.com/android/repository/android-ndk-r19c-linux-x86_64.zip -O ndk.zip
           unzip -q ndk.zip && rm ndk.zip
 
       - name: Setup environment
@@ -240,19 +240,19 @@ jobs:
         run: |
           cd chromium/src
           cat > args.gn << 'EOF'
-          target_os = "android"
-          target_cpu = "arm"
-          is_debug = false
-          is_component_build = false
-          symbol_level = 0
-          enable_nacl = false
-          proprietary_codecs = true
-          ffmpeg_branding = "Chrome"
-          use_openh264 = false
-          is_clang = true
-          treat_warnings_as_errors = false
-          use_sysroot = false
-          EOF
+target_os = "android"
+target_cpu = "arm"
+is_debug = false
+is_component_build = false
+symbol_level = 0
+enable_nacl = false
+proprietary_codecs = true
+ffmpeg_branding = "Chrome"
+use_openh264 = false
+is_clang = true
+treat_warnings_as_errors = false
+use_sysroot = false
+EOF
           gn gen out/arm --args="$(cat args.gn)"
 
       - name: Build Chromium
@@ -305,19 +305,19 @@ jobs:
         run: |
           cd chromium/src
           cat > args.gn << 'EOF'
-          target_os = "android"
-          target_cpu = "arm64"
-          is_debug = false
-          is_component_build = false
-          symbol_level = 0
-          enable_nacl = false
-          proprietary_codecs = true
-          ffmpeg_branding = "Chrome"
-          use_openh264 = false
-          is_clang = true
-          treat_warnings_as_errors = false
-          use_sysroot = false
-          EOF
+target_os = "android"
+target_cpu = "arm64"
+is_debug = false
+is_component_build = false
+symbol_level = 0
+enable_nacl = false
+proprietary_codecs = true
+ffmpeg_branding = "Chrome"
+use_openh264 = false
+is_clang = true
+treat_warnings_as_errors = false
+use_sysroot = false
+EOF
           gn gen out/arm64 --args="$(cat args.gn)"
 
       - name: Build Chromium
@@ -342,7 +342,8 @@ jobs:
   # Упаковка APK
   # ============================================================
   package-apk:
-    needs: [build-engine-armv7a, build-engine-arm64]
+    needs: [build-engine-armv7a]
+    if: always() && needs.build-engine-armv7a.result == 'success'
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
@@ -352,8 +353,9 @@ jobs:
           name: engine-armv7a
           path: engine-armv7a/
 
-      - name: Download engine arm64
+      - name: Download engine arm64 (optional)
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: engine-arm64
           path: engine-arm64/
