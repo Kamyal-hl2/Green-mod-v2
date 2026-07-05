@@ -1,0 +1,25 @@
+# NDK (download separately, ~1.5GB)
+ndk/
+
+# Build artifacts
+engine/build/
+*.o
+*.d
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Gradle
+launcher/.gradle/
+launcher/build/
+launcher/local.properties
+launcher/gradle/wrapper/gradle-wrapper.jar
+
+# Temp
+*.tmp
+*.log
