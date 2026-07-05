@@ -147,7 +147,11 @@ jobs:
         if: steps.cache-ndk.outputs.cache-hit != 'true'
         run: |
           mkdir -p ndk && cd ndk
-          wget -q --timeout=120 --tries=3 https://dl.google.com/android/repository/android-ndk-r19c-linux-x86_64.zip -O ndk.zip
+          for i in 1 2 3 4 5; do
+            wget -q --timeout=600 --tries=1 https://dl.google.com/android/repository/android-ndk-r19c-linux-x86_64.zip -O ndk.zip && break
+            echo "Download attempt $i failed, retrying..."
+            sleep 10
+          done
           unzip -q ndk.zip && rm ndk.zip
 
       - name: Setup environment
