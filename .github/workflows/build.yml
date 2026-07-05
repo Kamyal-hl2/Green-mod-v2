@@ -148,7 +148,7 @@ jobs:
         run: |
           mkdir -p ndk && cd ndk
           echo "Downloading NDK r19c from GitHub Release..."
-          wget -q --timeout=600 --tries=3 "https://github.com/Kamyal-hl2/green-engine-v1/releases/download/ndk-r19c/android-ndk-r19c-linux-x86_64.zip" -O ndk.zip
+          wget -L -q --timeout=600 --tries=3 "https://github.com/Kamyal-hl2/green-engine-v1/releases/download/ndk-r19c/android-ndk-r19c-linux-x86_64.zip" -O ndk.zip
           echo "Extracting..."
           unzip -q ndk.zip
           rm ndk.zip
@@ -240,19 +240,18 @@ jobs:
       - name: Fetch Chromium source
         run: |
           mkdir -p chromium && cd chromium
+          fetch --nohooks --no-history chromium
           cat > .gclient << 'GCEOF'
           solutions = [
             {
               "name": "src",
               "url": "https://chromium.googlesource.com/chromium/src.git",
               "managed": False,
-              "custom_deps": {},
-              "custom_vars": {},
             },
           ]
           target_os = ["android"]
           GCEOF
-          fetch --nohooks --no-history src
+          gclient sync --nohooks
           cd src && gclient runhooks
 
       - name: Configure Chromium for Android ARM
@@ -329,7 +328,18 @@ jobs:
           ]
           target_os = ["android"]
           GCEOF
-          fetch --nohooks --no-history src
+          fetch --nohooks --no-history chromium
+          cat > .gclient << 'GCEOF2'
+          solutions = [
+            {
+              "name": "src",
+              "url": "https://chromium.googlesource.com/chromium/src.git",
+              "managed": False,
+            },
+          ]
+          target_os = ["android"]
+          GCEOF2
+          gclient sync --nohooks
           cd src && gclient runhooks
 
       - name: Configure Chromium for Android ARM64
