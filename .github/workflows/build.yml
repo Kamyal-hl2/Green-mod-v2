@@ -235,7 +235,11 @@ jobs:
             libgtk-3-0 ninja-build libdbus-1-dev libglib2.0-dev \
             libnss3-dev libnspr4-dev libpci-dev libpulse-dev \
             libxss-dev libxtst-dev libxcursor-dev libxrandr-dev \
-            libxi-dev libxcomposite-dev libxdamage-dev libxfixes-dev
+            libxi-dev libxcomposite-dev libxdamage-dev libxfixes-dev \
+            libpango1.0-dev libcairo2-dev libharfbuzz-dev libatk1.0-dev \
+            libatspi2.0-dev libcups2-dev libdrm-dev libgbm-dev \
+            libxkbcommon-dev libwayland-dev wayland-protocols \
+            libva-dev libvulkan-dev glslang-dev
 
       - name: Install depot_tools
         run: |
@@ -314,7 +318,11 @@ jobs:
             libgtk-3-0 ninja-build libdbus-1-dev libglib2.0-dev \
             libnss3-dev libnspr4-dev libpci-dev libpulse-dev \
             libxss-dev libxtst-dev libxcursor-dev libxrandr-dev \
-            libxi-dev libxcomposite-dev libxdamage-dev libxfixes-dev
+            libxi-dev libxcomposite-dev libxdamage-dev libxfixes-dev \
+            libpango1.0-dev libcairo2-dev libharfbuzz-dev libatk1.0-dev \
+            libatspi2.0-dev libcups2-dev libdrm-dev libgbm-dev \
+            libxkbcommon-dev libwayland-dev wayland-protocols \
+            libva-dev libvulkan-dev glslang-dev
 
       - name: Install depot_tools
         run: |
