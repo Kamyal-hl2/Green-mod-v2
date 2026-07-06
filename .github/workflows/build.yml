@@ -139,22 +139,24 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ndk/android-ndk-r19c
-          key: android-ndk-r19c-v1
+          key: android-ndk-r19c-v2
 
       - name: Download NDK r19c
         if: steps.cache-ndk-r19c.outputs.cache-hit != 'true'
         run: |
+          set -e
           mkdir -p ndk && cd ndk
-          wget -q --timeout=120 --tries=3 https://dl.google.com/android/repository/android-ndk-r19c-linux-x86_64.zip -O ndk.zip
-          unzip -q ndk.zip && rm ndk.zip
-
-      - name: Verify NDK r19c
-        run: |
-          NDK_BIN="${{ github.workspace }}/ndk/android-ndk-r19c/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          ls "$NDK_BIN/aarch64-linux-android21-clang"
-          ls "$NDK_BIN/llvm-ar"
-          ls "$NDK_BIN/llvm-ranlib"
-          echo "NDK r19c OK"
+          echo "Downloading NDK r19c (~786MB)..."
+          wget --timeout=300 --tries=3 --progress=dot:giga \
+            https://dl.google.com/android/repository/android-ndk-r19c-linux-x86_64.zip \
+            -O ndk.zip
+          echo "Download complete. Size:"
+          ls -lh ndk.zip
+          echo "Extracting..."
+          unzip -q ndk.zip
+          rm ndk.zip
+          echo "NDK r19c extracted"
+          ls android-ndk-r19c/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang
 
       - name: Setup environment
         run: |
