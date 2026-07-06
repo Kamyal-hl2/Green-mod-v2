@@ -166,13 +166,19 @@ jobs:
 
       - name: Build bzip2
         run: |
+          set -e
           wget -q https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz
           tar -xzf bzip2-1.0.8.tar.gz && cd bzip2-1.0.8
-          make libbz2.a \
-            CC="$NDK_BIN/aarch64-linux-android21-clang" \
-            AR="$NDK_BIN/llvm-ar" \
-            RANLIB="$NDK_BIN/llvm-ranlib" \
-            CFLAGS="-fPIC -O2 -Wall -Winline -D_FILE_OFFSET_BITS=64"
+          CC="$NDK_BIN/aarch64-linux-android21-clang"
+          CFLAGS="-fPIC -O2 -Wall -Winline -D_FILE_OFFSET_BITS=64"
+          SRCS="blocksort.c bzip2.c bzlib.c compress.c crctable.c decompress.c huffman.c randtable.c"
+          for f in $SRCS; do
+            echo "Compiling $f..."
+            $CC $CFLAGS -c "$f" -o "${f%.c}.o"
+          done
+          $NDK_BIN/llvm-ar rcs libbz2.a *.o
+          echo "libbz2.a built:"
+          ls -lh libbz2.a
           mkdir -p ${{ github.workspace }}/engine/lib/android/aarch64
           cp libbz2.a ${{ github.workspace }}/engine/lib/android/aarch64/
 
