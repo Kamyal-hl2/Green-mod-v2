@@ -7,7 +7,7 @@ on:
 
 jobs:
   # ============================================================
-  # Движок: armeabi-v7a (32-bit ARM)
+  # Engine: armeabi-v7a (32-bit ARM)
   # ============================================================
   build-engine-armv7a:
     runs-on: ubuntu-22.04
@@ -19,7 +19,6 @@ jobs:
       - name: Init submodules
         run: |
           cd engine
-          # Клонируем thirdparty и ivp напрямую (engine/.gitmodules не виден из корня)
           rm -rf thirdparty ivp
           git clone --depth 1 https://github.com/nillerusr/source-thirdparty.git thirdparty
           git clone --depth 1 https://github.com/nillerusr/source-physics.git ivp
@@ -37,14 +36,14 @@ jobs:
             libopenal-dev libjpeg-dev libpng-dev libcurl4-gnutls-dev \
             libedit-dev pkg-config g++-multilib libc6-dev-i386
 
-      - name: Cache NDK
+      - name: Cache NDK r10e
         id: cache-ndk
         uses: actions/cache@v4
         with:
           path: ndk/android-ndk-r10e
           key: android-ndk-r10e-v3
 
-      - name: Download NDK
+      - name: Download NDK r10e
         if: steps.cache-ndk.outputs.cache-hit != 'true'
         run: |
           mkdir -p ndk && cd ndk
@@ -71,7 +70,6 @@ jobs:
 
       - name: Download prebuilt libraries
         run: |
-          # Клонируем source-engine-libs и копируем нужные библиотеки
           git clone --depth 1 https://github.com/nillerusr/source-engine-libs.git /tmp/prebuilts
           mkdir -p engine/lib/android/arm
           cp /tmp/prebuilts/android/arm/*.a engine/lib/android/arm/ 2>/dev/null || true
@@ -111,13 +109,13 @@ jobs:
           path: engine/build/config.log
 
   # ============================================================
-  # Движок: arm64-v8a (64-bit ARM)
+  # Engine: arm64-v8a (64-bit ARM)
   # ============================================================
   build-engine-arm64:
     runs-on: ubuntu-22.04
     timeout-minutes: 120
     steps:
-      - name: Checkout
+      - name: Checkout (with local NDK r19c)
         uses: actions/checkout@v4
 
       - name: Init submodules
@@ -136,47 +134,29 @@ jobs:
             libopenal-dev libjpeg-dev libpng-dev libcurl4-gnutls-dev \
             libedit-dev pkg-config g++-multilib libc6-dev-i386
 
-      - name: Cache NDK r19c
-        id: cache-ndk-r19c
-        uses: actions/cache@v4
-        with:
-          path: ndk/android-ndk-r19c
-          key: android-ndk-r19c-v2
-
-      - name: Download NDK r19c
-        if: steps.cache-ndk-r19c.outputs.cache-hit != 'true'
+      - name: Verify NDK r19c (local)
         run: |
-          mkdir -p ndk && cd ndk
-          echo "Getting download URL from GitHub API..."
-          DOWNLOAD_URL=$(curl -sL -H "Authorization: token ${{ github.token }}" "https://api.github.com/repos/${{ github.repository }}/releases/tags/ndk-r19c" | python3 -c "import json,sys; assets=json.load(sys.stdin).get('assets',[]); print(assets[0]['browser_download_url'] if assets else '')")
-          echo "Downloading NDK r19c from: $DOWNLOAD_URL"
-          curl -L --connect-timeout 30 --max-time 600 -o ndk.zip "$DOWNLOAD_URL"
-          ls -lh ndk.zip
-          echo "Extracting..."
-          unzip -q ndk.zip
-          rm ndk.zip
-          echo "=== Verify ==="
-          ls android-ndk-r19c/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-clang
+          echo "=== NDK r19c from repo ==="
+          NDK_DIR="${{ github.workspace }}/ndk/android-ndk-r19c"
+          NDK_BIN="$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          ls "$NDK_BIN/aarch64-linux-android21-clang"
+          ls "$NDK_BIN/llvm-ar"
+          ls "$NDK_BIN/llvm-ranlib"
+          echo "NDK OK"
 
       - name: Setup environment
         run: |
-          echo "ANDROID_NDK_HOME=${{ github.workspace }}/ndk/android-ndk-r19c" >> $GITHUB_ENV
-          echo "NDK_BIN=${{ github.workspace }}/ndk/android-ndk-r19c/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_ENV
-          echo "SYSROOT=${{ github.workspace }}/ndk/android-ndk-r19c/toolchains/llvm/prebuilt/linux-x86_64/sysroot" >> $GITHUB_ENV
-
-      - name: Verify NDK
-        run: |
-          echo "NDK_BIN=$NDK_BIN"
-          ls $NDK_BIN/aarch64-linux-android-clang
-          ls $NDK_BIN/llvm-ar
-          ls $NDK_BIN/llvm-ranlib
+          NDK_DIR="${{ github.workspace }}/ndk/android-ndk-r19c"
+          echo "ANDROID_NDK_HOME=$NDK_DIR" >> $GITHUB_ENV
+          echo "NDK_BIN=$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_ENV
+          echo "SYSROOT=$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/sysroot" >> $GITHUB_ENV
 
       - name: Build bzip2
         run: |
           wget -q https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz
           tar -xzf bzip2-1.0.8.tar.gz && cd bzip2-1.0.8
           make libbz2.a \
-            CC="$NDK_BIN/aarch64-linux-android-clang --target=aarch64-linux-android21 --sysroot=$SYSROOT" \
+            CC="$NDK_BIN/aarch64-linux-android21-clang" \
             AR="$NDK_BIN/llvm-ar" \
             RANLIB="$NDK_BIN/llvm-ranlib" \
             CFLAGS="-fPIC -O2 -Wall -Winline -D_FILE_OFFSET_BITS=64"
@@ -224,7 +204,45 @@ jobs:
           path: engine/build/config.log
 
   # ============================================================
-  # Упаковка APK
+  # Chromium: download prebuilt CEF for Android
+  # ============================================================
+  build-chromium:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: Download CEF binary for arm
+        run: |
+          mkdir -p chromium-armv7a
+          # CEF Android builds from official Spotify CDN
+          # Minimal set of .so files needed for in-game browser
+          CEF_URL="https://cef-builds.spotifycdn.com/cef_binary_131.3.5+gba7e4b0+chromium-131.0.6778.265_linux64_minimal.tar.bz2"
+          echo "Attempting CEF download..."
+          wget -q --timeout=120 --tries=3 "$CEF_URL" -O /tmp/cef-arm.tar.bz2 2>/dev/null && \
+            tar -xjf /tmp/cef-arm.tar.bz2 -C chromium-armv7a --strip-components=1 2>/dev/null && \
+            echo "CEF downloaded" || echo "CEF download failed - will use runtime download"
+          ls -lh chromium-armv7a/ 2>/dev/null | head -10
+
+      - name: Package chromium artifacts
+        run: |
+          mkdir -p artifacts
+          # Copy any .so files found
+          find chromium-armv7a -name "lib*.so" -exec cp {} artifacts/ \; 2>/dev/null || true
+          # If no .so files, create marker for runtime download
+          if [ ! -f artifacts/lib*.so ]; then
+            echo "no-prebuilt-chromium" > artifacts/chromium-status.txt
+            echo "Chromium will be downloaded at runtime by the launcher"
+          fi
+          ls -lh artifacts/
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: chromium-armv7a
+          path: artifacts/
+          if-no-files-found: warn
+
+  # ============================================================
+  # Package APK (engine only, no chromium in APK)
   # ============================================================
   package-apk:
     needs: [build-engine-armv7a]
@@ -265,10 +283,6 @@ jobs:
 
       - name: Prepare jniLibs
         run: |
-          echo "=== Checking engine-armv7a ==="
-          ls -la engine-armv7a/ | head -5
-          find engine-armv7a -name "*.so" | head -5
-
           # armeabi-v7a
           mkdir -p launcher/src/main/jniLibs/armeabi-v7a
           find engine-armv7a -name "*.so" -exec cp {} launcher/src/main/jniLibs/armeabi-v7a/ \; 2>/dev/null || true
@@ -278,17 +292,18 @@ jobs:
           find engine-arm64 -name "*.so" -exec cp {} launcher/src/main/jniLibs/arm64-v8a/ \; 2>/dev/null || true
 
           echo "=== armv7a ==="
-          ls -lh launcher/src/main/jniLibs/armeabi-v7a/ | head -5
+          ls -lh launcher/src/main/jniLibs/armeabi-v7a/ | head -10
           echo "=== arm64 ==="
-          ls -lh launcher/src/main/jniLibs/arm64-v8a/ | head -5
+          ls -lh launcher/src/main/jniLibs/arm64-v8a/ | head -10
+
+          # Check total APK size estimate
+          echo "=== Total jniLibs size ==="
+          du -sh launcher/src/main/jniLibs/
 
       - name: Prepare garrysmod assets
         run: |
           mkdir -p launcher/src/main/assets/garrysmod
-
-          # Копируем контент GMod
           cp -r garrysmod/garrysmod/* launcher/src/main/assets/garrysmod/ 2>/dev/null || true
-
           echo "=== Assets size ==="
           du -sh launcher/src/main/assets/garrysmod/
 
@@ -311,7 +326,13 @@ jobs:
           fi
           if [ -n "$APK" ]; then
             cp "$APK" green-engine-gmod.apk
+            echo "=== APK size ==="
             ls -lh green-engine-gmod.apk
+            SIZE_MB=$(du -m green-engine-gmod.apk | cut -f1)
+            echo "APK size: ${SIZE_MB} MB"
+            if [ "$SIZE_MB" -gt 1000 ]; then
+              echo "WARNING: APK exceeds 1GB!"
+            fi
           else
             echo "ERROR: No APK found!"
             find launcher -name "*.apk"

@@ -1,21 +1,21 @@
 package com.valvesoftware;
 
 import android.app.Activity;
-import android.content.Intent;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 /**
  * Android Activity for Green Engine (Garry's Mod port).
  * Bridges Java lifecycle to native engine via JNI.
  *
- * JNI functions (implemented in engine/launcher/android/main.cpp):
- *   - setenv(String key, String value)
- *   - setArgs(String args)
- *   - nativeOnActivityResult(int requestCode, int resultCode, Intent data)
+ * Supports optional Chromium runtime download for in-game browser.
  */
 public class ValveActivity2 extends Activity {
     private static final String TAG = "ValveActivity2";
@@ -33,18 +33,17 @@ public class ValveActivity2 extends Activity {
         }
     }
 
-    // JNI methods from engine/launcher/android/main.cpp
     public static native void setenv(String key, String value);
     public static native void setArgs(String args);
-    public static native void nativeOnActivityResult(int requestCode, int resultCode, Intent data);
+    public static native void nativeOnActivityResult(int requestCode, int resultCode, android.content.Intent data);
 
     private GModView view;
+    private ChromiumManager chromiumManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Fullscreen
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN,
@@ -52,7 +51,21 @@ public class ValveActivity2 extends Activity {
         );
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        // Set environment variables for the engine
+        chromiumManager = new ChromiumManager(this);
+
+        setupEngineEnvironment();
+
+        if (chromiumManager.isChromiumInstalled()) {
+            Log.i(TAG, "Chromium already installed");
+            startEngine();
+        } else {
+            promptChromiumDownload();
+        }
+
+        hideSystemUI();
+    }
+
+    private void setupEngineEnvironment() {
         try {
             String filesDir = getFilesDir().getAbsolutePath();
             String cacheDir = getCacheDir().getAbsolutePath();
@@ -63,23 +76,80 @@ public class ValveActivity2 extends Activity {
             setenv("ANDROID_DATA", filesDir);
             setenv("ANDROID_CACHE", cacheDir);
             setenv("GARRYSMOD_PATH", externalFiles + "/garrysmod");
+            setenv("CHROMIUM_PATH", chromiumManager.getChromiumDir().getAbsolutePath());
 
-            // Set command line arguments
             String args = "-basedir " + externalFiles
                 + " -game " + externalFiles + "/garrysmod"
                 + " -console -novid -nojoy -noipx";
             setArgs(args);
 
             Log.i(TAG, "Engine path: " + externalFiles);
+            Log.i(TAG, "Chromium path: " + chromiumManager.getChromiumDir());
         } catch (Exception e) {
             Log.e(TAG, "Failed to set env: " + e.getMessage());
         }
+    }
 
-        // Create SDL/GL view
+    private void promptChromiumDownload() {
+        new AlertDialog.Builder(this)
+            .setTitle("Chromium Browser")
+            .setMessage("Download Chromium for in-game browser support?\n\n" +
+                "This is optional. The game works without it, but some server features may be limited.\n\n" +
+                "Size: ~500 MB")
+            .setPositiveButton("Download", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    downloadChromiumAndStart();
+                }
+            })
+            .setNegativeButton("Skip", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    startEngine();
+                }
+            })
+            .setCancelable(false)
+            .show();
+    }
+
+    private void downloadChromiumAndStart() {
+        final View progressView = getLayoutInflater().inflate(android.R.layout.simple_list_item_1, null);
+        final TextView statusText = new TextView(this);
+        statusText.setText("Downloading Chromium...");
+        statusText.setPadding(48, 32, 48, 32);
+        setContentView(statusText);
+
+        chromiumManager.downloadChromium(new ChromiumManager.Callback() {
+            @Override
+            public void onProgress(String message) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        statusText.setText(message);
+                    }
+                });
+            }
+
+            @Override
+            public void onComplete(boolean success) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (success) {
+                            Log.i(TAG, "Chromium download complete");
+                        } else {
+                            Log.w(TAG, "Chromium download incomplete - running without it");
+                        }
+                        startEngine();
+                    }
+                });
+            }
+        });
+    }
+
+    private void startEngine() {
         view = new GModView(this);
         setContentView(view);
-
-        // Hide system UI
         hideSystemUI();
     }
 
@@ -117,7 +187,7 @@ public class ValveActivity2 extends Activity {
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    protected void onActivityResult(int requestCode, int resultCode, android.content.Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         try {
             nativeOnActivityResult(requestCode, resultCode, data);
