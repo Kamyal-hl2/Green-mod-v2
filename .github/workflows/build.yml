@@ -156,7 +156,7 @@ jobs:
           unzip -q ndk.zip
           rm ndk.zip
           echo "=== Verify ==="
-          ls android-ndk-r19c/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang
+          ls android-ndk-r19c/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-clang
 
       - name: Setup environment
         run: |
@@ -167,14 +167,16 @@ jobs:
       - name: Verify NDK
         run: |
           echo "NDK_BIN=$NDK_BIN"
-          ls $NDK_BIN/aarch64-linux-android21-clang
+          ls $NDK_BIN/aarch64-linux-android-clang
+          ls $NDK_BIN/llvm-ar
+          ls $NDK_BIN/llvm-ranlib
 
       - name: Build bzip2
         run: |
           wget -q https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz
           tar -xzf bzip2-1.0.8.tar.gz && cd bzip2-1.0.8
           make libbz2.a \
-            CC="$NDK_BIN/aarch64-linux-android21-clang" \
+            CC="$NDK_BIN/aarch64-linux-android-clang --target=aarch64-linux-android21 --sysroot=$SYSROOT" \
             AR="$NDK_BIN/llvm-ar" \
             RANLIB="$NDK_BIN/llvm-ranlib" \
             CFLAGS="-fPIC -O2 -Wall -Winline -D_FILE_OFFSET_BITS=64"
@@ -222,172 +224,6 @@ jobs:
           path: engine/build/config.log
 
   # ============================================================
-  # Chromium: armeabi-v7a
-  # ============================================================
-  build-chromium-armv7a:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 360
-    steps:
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3 git build-essential wget curl \
-            lsb-release software-properties-common gnupg \
-            libnss3 libatk-bridge2.0-0 libdrm2 libxcomposite1 \
-            libxdamage1 libxrandr2 libgbm1 libasound2 libpangocairo-1.0-0 \
-            libgtk-3-0 ninja-build libdbus-1-dev libglib2.0-dev \
-            libnss3-dev libnspr4-dev libpci-dev libpulse-dev \
-            libxss-dev libxtst-dev libxcursor-dev libxrandr-dev \
-            libxi-dev libxcomposite-dev libxdamage-dev libxfixes-dev \
-            libpango1.0-dev libcairo2-dev libharfbuzz-dev libatk1.0-dev \
-            libatspi2.0-dev libcups2-dev libdrm-dev libgbm-dev \
-            libxkbcommon-dev libwayland-dev wayland-protocols \
-            libva-dev libvulkan-dev glslang-dev
-
-      - name: Install depot_tools
-        run: |
-          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-          echo "DEPOT_TOOLS=${{ github.workspace }}/depot_tools" >> $GITHUB_ENV
-          echo "PATH=${{ github.workspace }}/depot_tools:$PATH" >> $GITHUB_ENV
-
-      - name: Fetch Chromium source
-        run: |
-          mkdir -p chromium && cd chromium
-          fetch --nohooks --no-history chromium
-          cat > .gclient << 'GCEOF'
-          solutions = [
-            {
-              "name": "src",
-              "url": "https://chromium.googlesource.com/chromium/src.git",
-              "managed": False,
-            },
-          ]
-          target_os = ["android"]
-          GCEOF
-          gclient sync --nohooks
-          cd src && gclient runhooks
-
-      - name: Configure Chromium for Android ARM
-        run: |
-          cd chromium/src
-          cat > args.gn << 'EOF'
-          target_os = "android"
-          target_cpu = "arm"
-          is_debug = false
-          is_component_build = false
-          symbol_level = 0
-          enable_nacl = false
-          proprietary_codecs = true
-          ffmpeg_branding = "Chrome"
-          use_openh264 = false
-          is_clang = true
-          treat_warnings_as_errors = false
-          use_sysroot = false
-          EOF
-          gn gen out/arm --args="$(cat args.gn)"
-
-      - name: Build Chromium
-        run: |
-          cd chromium/src
-          autoninja -C out/arm content_shell_apk
-
-      - name: Extract .so files
-        run: |
-          mkdir -p artifacts
-          find chromium/src/out/arm -name "lib*.so" -exec cp {} artifacts/ \; 2>/dev/null || true
-          ls -lh artifacts/
-
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: chromium-armv7a
-          path: artifacts/
-          if-no-files-found: warn
-
-  # ============================================================
-  # Chromium: arm64-v8a
-  # ============================================================
-  build-chromium-arm64:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 360
-    steps:
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3 git build-essential wget curl \
-            lsb-release software-properties-common gnupg \
-            libnss3 libatk-bridge2.0-0 libdrm2 libxcomposite1 \
-            libxdamage1 libxrandr2 libgbm1 libasound2 libpangocairo-1.0-0 \
-            libgtk-3-0 ninja-build libdbus-1-dev libglib2.0-dev \
-            libnss3-dev libnspr4-dev libpci-dev libpulse-dev \
-            libxss-dev libxtst-dev libxcursor-dev libxrandr-dev \
-            libxi-dev libxcomposite-dev libxdamage-dev libxfixes-dev \
-            libpango1.0-dev libcairo2-dev libharfbuzz-dev libatk1.0-dev \
-            libatspi2.0-dev libcups2-dev libdrm-dev libgbm-dev \
-            libxkbcommon-dev libwayland-dev wayland-protocols \
-            libva-dev libvulkan-dev glslang-dev
-
-      - name: Install depot_tools
-        run: |
-          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-          echo "DEPOT_TOOLS=${{ github.workspace }}/depot_tools" >> $GITHUB_ENV
-          echo "PATH=${{ github.workspace }}/depot_tools:$PATH" >> $GITHUB_ENV
-
-      - name: Fetch Chromium source
-        run: |
-          mkdir -p chromium && cd chromium
-          fetch --nohooks --no-history chromium
-          cat > .gclient << 'GCEOF2'
-          solutions = [
-            {
-              "name": "src",
-              "url": "https://chromium.googlesource.com/chromium/src.git",
-              "managed": False,
-            },
-          ]
-          target_os = ["android"]
-          GCEOF2
-          gclient sync --nohooks
-          cd src && gclient runhooks
-
-      - name: Configure Chromium for Android ARM64
-        run: |
-          cd chromium/src
-          cat > args.gn << 'EOF'
-          target_os = "android"
-          target_cpu = "arm64"
-          is_debug = false
-          is_component_build = false
-          symbol_level = 0
-          enable_nacl = false
-          proprietary_codecs = true
-          ffmpeg_branding = "Chrome"
-          use_openh264 = false
-          is_clang = true
-          treat_warnings_as_errors = false
-          use_sysroot = false
-          EOF
-          gn gen out/arm64 --args="$(cat args.gn)"
-
-      - name: Build Chromium
-        run: |
-          cd chromium/src
-          autoninja -C out/arm64 content_shell_apk
-
-      - name: Extract .so files
-        run: |
-          mkdir -p artifacts
-          find chromium/src/out/arm64 -name "lib*.so" -exec cp {} artifacts/ \; 2>/dev/null || true
-          ls -lh artifacts/
-
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: chromium-arm64
-          path: artifacts/
-          if-no-files-found: warn
-
-  # ============================================================
   # Упаковка APK
   # ============================================================
   package-apk:
@@ -410,20 +246,6 @@ jobs:
         with:
           name: engine-arm64
           path: engine-arm64/
-
-      - name: Download chromium armv7a (optional)
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: chromium-armv7a
-          path: chromium-armv7a/
-
-      - name: Download chromium arm64 (optional)
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: chromium-arm64
-          path: chromium-arm64/
 
       - name: Verify downloads
         run: |
