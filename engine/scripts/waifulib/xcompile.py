@@ -303,7 +303,10 @@ class Android:
 			ldflags += ['-lgcc']
 
 		if self.is_clang() or self.is_host():
-			ldflags += ['-stdlib=libstdc++']
+			if self.ndk_rev >= 18:
+				ldflags += ['-stdlib=libc++']
+			else:
+				ldflags += ['-stdlib=libstdc++']
 		if self.is_arm():
 			if self.arch == 'armeabi-v7a':
 				ldflags += ['-march=armv7-a']
@@ -345,12 +348,16 @@ def configure(conf):
 		conf.env.CXXFLAGS += android.cflags(True)
 		conf.env.LINKFLAGS += android.linkflags()
 		conf.env.LDFLAGS += android.ldflags()
-		conf.env.INCLUDES += [
-			os.path.abspath(os.path.join(android.ndk_home, 'sources', 'cxx-stl', 'gnu-libstdc++', '4.9', 'include')),
-			os.path.abspath(os.path.join(android.ndk_home, 'sources', 'cxx-stl', 'gnu-libstdc++', '4.9', 'libs', stlarch, 'include'))
-		]
-		conf.env.STLIBPATH += [os.path.abspath(os.path.join(android.ndk_home, 'sources','cxx-stl','gnu-libstdc++','4.9','libs',stlarch))]
-		conf.env.LDFLAGS += ['-lgnustl_static']
+		if android.ndk_rev >= 18:
+			# NDK r18+ removed gnustl, use libc++ (bundled with unified toolchain)
+			conf.env.LDFLAGS += ['-lc++_static']
+		else:
+			conf.env.INCLUDES += [
+				os.path.abspath(os.path.join(android.ndk_home, 'sources', 'cxx-stl', 'gnu-libstdc++', '4.9', 'include')),
+				os.path.abspath(os.path.join(android.ndk_home, 'sources', 'cxx-stl', 'gnu-libstdc++', '4.9', 'libs', stlarch, 'include'))
+			]
+			conf.env.STLIBPATH += [os.path.abspath(os.path.join(android.ndk_home, 'sources','cxx-stl','gnu-libstdc++','4.9','libs',stlarch))]
+			conf.env.LDFLAGS += ['-lgnustl_static']
 
 		conf.env.HAVE_M = True
 		if android.is_hardfp():
@@ -380,8 +387,8 @@ def post_compiler_cxx_configure(conf):
 
 	if conf.options.ANDROID_OPTS:
 		if conf.android.ndk_rev == 19:
-			conf.env.CXXFLAGS_cxxshlib += ['-static-libstdc++']
-			conf.env.LDFLAGS_cxxshlib += ['-static-libstdc++']
+			conf.env.CXXFLAGS_cxxshlib += ['-static-libc++']
+			conf.env.LDFLAGS_cxxshlib += ['-static-libc++']
 	return
 
 def post_compiler_c_configure(conf):
