@@ -352,6 +352,7 @@ def configure(conf):
 			# NDK r18+ removed gnustl, use libc++ (bundled with unified toolchain)
 			conf.env.LDFLAGS += ['-lc++_static']
 		else:
+			# NDK r10-r17: use gnustl (GNU STL)
 			conf.env.INCLUDES += [
 				os.path.abspath(os.path.join(android.ndk_home, 'sources', 'cxx-stl', 'gnu-libstdc++', '4.9', 'include')),
 				os.path.abspath(os.path.join(android.ndk_home, 'sources', 'cxx-stl', 'gnu-libstdc++', '4.9', 'libs', stlarch, 'include'))
@@ -387,6 +388,7 @@ def post_compiler_cxx_configure(conf):
 
 	if conf.options.ANDROID_OPTS:
 		if conf.android.ndk_rev == 19:
+			# NDK r18+: use libc++ static linking
 			conf.env.CXXFLAGS_cxxshlib += ['-static-libc++']
 			conf.env.LDFLAGS_cxxshlib += ['-static-libc++']
 	return

@@ -12,7 +12,8 @@ def options(opt):
 	return
 
 def configure(conf):
-	conf.define('_WINDOWS',1) # WTF? this defined in original vpc file
+	if conf.env.DEST_OS == 'win32':
+		conf.define('_WINDOWS',1)
 	#conf.define('PROTECTED_THINGS_ENABLE',1) # conflicts with stlport
 
 def build(bld):

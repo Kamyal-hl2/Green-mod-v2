@@ -256,7 +256,10 @@ bool GetExecutableName( char *out, int outSize )
 char *GetBaseDirectory( void )
 {
 #ifdef ANDROID
-	return getenv("VALVE_GAME_PATH");
+	const char *path = getenv("VALVE_GAME_PATH");
+	if (!path) path = getenv("APP_DATA_PATH");
+	if (!path) path = "/sdcard/Android/data/com.greenengine.gmod/files";
+	return (char*)path;
 #else
 	return g_szBasedir;
 #endif
@@ -274,14 +277,14 @@ void UTIL_ComputeBaseDir()
 		char const *pBaseDir = CommandLine()->ParmValue( "-basedir" );
 		if ( pBaseDir )
 		{
-			strcpy( g_szBasedir, pBaseDir );
+			Q_strncpy( g_szBasedir, pBaseDir, sizeof(g_szBasedir) );
 		}
 	}
 
 	if ( !g_szBasedir[0] && GetExecutableName( g_szBasedir, sizeof( g_szBasedir ) ) )
 	{
 		char *pBuffer = strrchr( g_szBasedir, '\\' );
-		if ( *pBuffer )
+		if ( pBuffer && *pBuffer )
 		{
 			*(pBuffer+1) = '\0';
 		}
@@ -302,7 +305,7 @@ void UTIL_ComputeBaseDir()
 		char const *pOverrideDir = CommandLine()->CheckParm( "-basedir" );
 		if ( pOverrideDir )
 		{
-			strcpy( g_szBasedir, pOverrideDir );
+			Q_strncpy( g_szBasedir, pOverrideDir, sizeof(g_szBasedir) );
 		}
 	}
 
@@ -428,7 +431,7 @@ void CLogAllFiles::Init()
 
 	// create file to dump out to
 	char szDir[ MAX_PATH ];
-	V_snprintf( szDir, sizeof( szDir ), "%s\\%s", m_sFullGamePath.String(), m_sResListDir.String() );
+	V_snprintf( szDir, sizeof( szDir ), "%s/%s", m_sFullGamePath.String(), m_sResListDir.String() );
 	g_pFullFileSystem->CreateDirHierarchy( szDir, "GAME" );
 
 	g_pFullFileSystem->AddLoggingFunc( &LogAllFilesFunc );
@@ -436,7 +439,7 @@ void CLogAllFiles::Init()
 	if ( !CommandLine()->FindParm( "-startmap" ) && !CommandLine()->FindParm( "-startstage" ) )
 	{
 		m_Logged.RemoveAll();
-		g_pFullFileSystem->RemoveFile( CFmtStr( "%s\\%s\\%s", m_sFullGamePath.String(), m_sResListDir.String(), ALL_RESLIST_FILE ), "GAME" );
+		g_pFullFileSystem->RemoveFile( CFmtStr( "%s/%s/%s", m_sFullGamePath.String(), m_sResListDir.String(), ALL_RESLIST_FILE ), "GAME" );
 	}
 
 #ifdef WIN32
@@ -462,9 +465,9 @@ void CLogAllFiles::Shutdown()
 	}
 
 	// Now load and sort all.lst
-	SortResList( CFmtStr( "%s\\%s\\%s", m_sFullGamePath.String(), m_sResListDir.String(), ALL_RESLIST_FILE ), "GAME" );
+	SortResList( CFmtStr( "%s/%s/%s", m_sFullGamePath.String(), m_sResListDir.String(), ALL_RESLIST_FILE ), "GAME" );
 	// Now load and sort engine.lst
-	SortResList( CFmtStr( "%s\\%s\\%s", m_sFullGamePath.String(), m_sResListDir.String(), ENGINE_RESLIST_FILE ), "GAME" );
+	SortResList( CFmtStr( "%s/%s/%s", m_sFullGamePath.String(), m_sResListDir.String(), ENGINE_RESLIST_FILE ), "GAME" );
 
 	m_Logged.Purge();
 }
@@ -472,7 +475,7 @@ void CLogAllFiles::Shutdown()
 void CLogAllFiles::LogToAllReslist( char const *line )
 {
 	// Open for append, write data, close.
-	FileHandle_t fh = g_pFullFileSystem->Open( CFmtStr( "%s\\%s\\%s", m_sFullGamePath.String(), m_sResListDir.String(), ALL_RESLIST_FILE ), "at", "GAME" );
+	FileHandle_t fh = g_pFullFileSystem->Open( CFmtStr( "%s/%s/%s", m_sFullGamePath.String(), m_sResListDir.String(), ALL_RESLIST_FILE ), "at", "GAME" );
 	if ( fh != FILESYSTEM_INVALID_HANDLE )
 	{
 		g_pFullFileSystem->Write("\"", 1, fh);
@@ -491,7 +494,9 @@ void CLogAllFiles::LogFile(const char *fullPathFileName, const char *options)
 	}
 
 	// write out to log file
+#ifdef WIN32
 	Assert( fullPathFileName[1] == ':' );
+#endif
 
 	int idx = m_Logged.Find( fullPathFileName );
 	if ( idx != m_Logged.InvalidIndex() )
@@ -887,7 +892,11 @@ const char *CSourceAppSystemGroup::DetermineDefaultMod()
 	{   		 
 		return CommandLine()->ParmValue( "-game", DEFAULT_HL2_GAMEDIR );
 	}
+#ifdef WIN32
 	return g_pHammer->GetDefaultMod();
+#else
+	return CommandLine()->ParmValue( "-game", DEFAULT_HL2_GAMEDIR );
+#endif
 }
 
 const char *CSourceAppSystemGroup::DetermineDefaultGame()
@@ -896,7 +905,11 @@ const char *CSourceAppSystemGroup::DetermineDefaultGame()
 	{
 		return CommandLine()->ParmValue( "-defaultgamedir", DEFAULT_HL2_GAMEDIR );
 	}
+#ifdef WIN32
 	return g_pHammer->GetDefaultGame();
+#else
+	return CommandLine()->ParmValue( "-defaultgamedir", DEFAULT_HL2_GAMEDIR );
+#endif
 }
 
 //-----------------------------------------------------------------------------

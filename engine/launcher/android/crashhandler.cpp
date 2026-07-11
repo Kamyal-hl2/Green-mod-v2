@@ -22,7 +22,11 @@ GNU General Public License for more details.
 #include <inttypes.h>
 #include "libunwind/libunwind.h"
 
-struct sigaction old_sa;
+struct sigaction old_sa_segv;
+struct sigaction old_sa_abrt;
+struct sigaction old_sa_bus;
+struct sigaction old_sa_fpe;
+struct sigaction old_sa_trap;
 
 #define IN_LIBGCC2 1 // means we want to define __cxxabiv1::__cxa_demangle
 namespace __cxxabiv1
@@ -41,7 +45,7 @@ struct backtrace_t
 	uintptr_t frames[MAX_FRAMES];
 };
 
-#define Log(msg) __android_log_print(ANDROID_LOG_DEBUG, "SRCENG", "%s", msg); DebugLogger()->Write(msg);
+#define Log(msg) do { __android_log_print(ANDROID_LOG_DEBUG, "SRCENG", "%s", msg); if (DebugLogger()) DebugLogger()->Write(msg); } while(0)
 
 void printPC(void *pc)
 {
@@ -135,10 +139,26 @@ static void CrashHandler( int sig, siginfo_t *si, void *uc)
 
 	Log(">>> crash report end\n");
 
-	if (old_sa.sa_sigaction)
-		(*old_sa.sa_sigaction)(sig, si, uc);
-	else if(old_sa.sa_handler)
-		(*old_sa.sa_handler)(sig);
+	if (sig == SIGSEGV && old_sa_segv.sa_sigaction)
+		(*old_sa_segv.sa_sigaction)(sig, si, uc);
+	else if (sig == SIGSEGV && old_sa_segv.sa_handler)
+		(*old_sa_segv.sa_handler)(sig);
+	else if (sig == SIGABRT && old_sa_abrt.sa_sigaction)
+		(*old_sa_abrt.sa_sigaction)(sig, si, uc);
+	else if (sig == SIGABRT && old_sa_abrt.sa_handler)
+		(*old_sa_abrt.sa_handler)(sig);
+	else if (sig == SIGBUS && old_sa_bus.sa_sigaction)
+		(*old_sa_bus.sa_sigaction)(sig, si, uc);
+	else if (sig == SIGBUS && old_sa_bus.sa_handler)
+		(*old_sa_bus.sa_handler)(sig);
+	else if (sig == SIGFPE && old_sa_fpe.sa_sigaction)
+		(*old_sa_fpe.sa_sigaction)(sig, si, uc);
+	else if (sig == SIGFPE && old_sa_fpe.sa_handler)
+		(*old_sa_fpe.sa_handler)(sig);
+	else if (sig == SIGTRAP && old_sa_trap.sa_sigaction)
+		(*old_sa_trap.sa_sigaction)(sig, si, uc);
+	else if (sig == SIGTRAP && old_sa_trap.sa_handler)
+		(*old_sa_trap.sa_handler)(sig);
 }
 
 void InitCrashHandler()
@@ -146,9 +166,9 @@ void InitCrashHandler()
 	struct sigaction act;
 	act.sa_sigaction = CrashHandler;
 	act.sa_flags = SA_SIGINFO | SA_ONSTACK;
-	sigaction(SIGSEGV, &act, &old_sa);
-	sigaction(SIGABRT, &act, &old_sa);
-	sigaction(SIGBUS, &act, &old_sa);
-	sigaction(SIGFPE, &act, &old_sa);
-	sigaction(SIGTRAP, &act, &old_sa);
+	sigaction(SIGSEGV, &act, &old_sa_segv);
+	sigaction(SIGABRT, &act, &old_sa_abrt);
+	sigaction(SIGBUS, &act, &old_sa_bus);
+	sigaction(SIGFPE, &act, &old_sa_fpe);
+	sigaction(SIGTRAP, &act, &old_sa_trap);
 }

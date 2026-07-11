@@ -11,7 +11,7 @@ buildscript {
 apply plugin: 'com.android.application'
 
 android {
-    namespace 'com.greenengine.gmod'
+    namespace 'com.valvesoftware'
     compileSdk 34
 
     defaultConfig {

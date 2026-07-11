@@ -21,15 +21,19 @@ public class ValveActivity2 extends Activity {
     private static final String TAG = "ValveActivity2";
 
     static {
+        boolean sdlLoaded = false;
         try {
             System.loadLibrary("SDL2");
+            sdlLoaded = true;
         } catch (UnsatisfiedLinkError e) {
             Log.e(TAG, "Failed to load libSDL2.so: " + e.getMessage());
         }
-        try {
-            System.loadLibrary("launcher");
-        } catch (UnsatisfiedLinkError e) {
-            Log.e(TAG, "Failed to load liblauncher.so: " + e.getMessage());
+        if (sdlLoaded) {
+            try {
+                System.loadLibrary("launcher");
+            } catch (UnsatisfiedLinkError e) {
+                Log.e(TAG, "Failed to load liblauncher.so: " + e.getMessage());
+            }
         }
     }
 
@@ -85,6 +89,8 @@ public class ValveActivity2 extends Activity {
 
             Log.i(TAG, "Engine path: " + externalFiles);
             Log.i(TAG, "Chromium path: " + chromiumManager.getChromiumDir());
+        } catch (UnsatisfiedLinkError e) {
+            Log.e(TAG, "JNI call failed (native libs not loaded): " + e.getMessage());
         } catch (Exception e) {
             Log.e(TAG, "Failed to set env: " + e.getMessage());
         }
@@ -135,6 +141,9 @@ public class ValveActivity2 extends Activity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+                        if (isFinishing() || isDestroyed()) {
+                            return;
+                        }
                         if (success) {
                             Log.i(TAG, "Chromium download complete");
                         } else {
@@ -191,6 +200,8 @@ public class ValveActivity2 extends Activity {
         super.onActivityResult(requestCode, resultCode, data);
         try {
             nativeOnActivityResult(requestCode, resultCode, data);
+        } catch (UnsatisfiedLinkError e) {
+            Log.e(TAG, "nativeOnActivityResult failed (native libs not loaded): " + e.getMessage());
         } catch (Exception e) {
             Log.e(TAG, "nativeOnActivityResult failed: " + e.getMessage());
         }

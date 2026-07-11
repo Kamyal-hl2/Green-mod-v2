@@ -93,7 +93,6 @@ projects={
 		'vtf',
 		'utils/vtex',
 		'unicode',
-		'video',
 	],
 	'tests': [
 		'appframework',
@@ -231,7 +230,7 @@ def define_platform(conf):
 		conf.env.append_unique('DEFINES', [
 			'ANDROID=1', '_ANDROID=1',
 			'LINUX=1', '_LINUX=1',
-			'POSIX=1', '_POSIX=1',
+			'POSIX=1', '_POSIX=1', 'PLATFORM_POSIX=1',
 			'GNUC',
 			'NO_HOOK_MALLOC',
 			'_DLL_EXT=.so'
@@ -636,21 +635,13 @@ def build(bld):
 		sdl_path = os.path.join('lib', bld.env.DEST_OS, bld.env.DEST_CPU, sdl_name)
 		bld.install_files(bld.env.LIBDIR, [sdl_path])
 
-	if bld.env.DEST_OS == 'win32':
-		projects['game'] += ['utils/bzip2']
-		projects['dedicated'] += ['utils/bzip2']
-
-	if bld.env.OPUS or bld.env.DEST_OS == 'android':
-		projects['game'] += ['engine/voice_codecs/opus']
+	# NOTE: subproject lists (bzip2, opus, togl/togles) are already configured
+	# in configure(). Do NOT re-append them here — the projects dict is global
+	# and appending twice causes duplicate builds and link errors.
 
 	if bld.env.TESTS:
 		bld.add_subproject(projects['tests'])
 	elif bld.env.DEDICATED:
 		bld.add_subproject(projects['dedicated'])
 	else:
-		if bld.env.TOGLES:
-			projects['game'] += ['togles']
-		elif bld.env.GL:
-			projects['game'] += ['togl']
-
 		bld.add_subproject(projects['game'])

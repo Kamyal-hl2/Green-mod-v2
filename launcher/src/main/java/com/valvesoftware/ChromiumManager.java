@@ -103,29 +103,37 @@ public class ChromiumManager {
                     conn.setReadTimeout(60000);
                     conn.setRequestMethod("GET");
 
-                    if (conn.getResponseCode() != 200) {
-                        publishProgress("Failed to download " + file + " (HTTP " + conn.getResponseCode() + ")");
-                        continue;
-                    }
+                    try {
+                        if (conn.getResponseCode() != 200) {
+                            publishProgress("Failed to download " + file + " (HTTP " + conn.getResponseCode() + ")");
+                            continue;
+                        }
 
-                    File tmp = new File(chromiumDir, file + ".tmp");
-                    InputStream in = conn.getInputStream();
-                    FileOutputStream out = new FileOutputStream(tmp);
-                    byte[] buf = new byte[8192];
-                    int read;
-                    while ((read = in.read(buf)) != -1) {
-                        out.write(buf, 0, read);
-                    }
-                    out.close();
-                    in.close();
-                    conn.disconnect();
+                        File tmp = new File(chromiumDir, file + ".tmp");
+                        InputStream in = null;
+                        FileOutputStream out = null;
+                        try {
+                            in = conn.getInputStream();
+                            out = new FileOutputStream(tmp);
+                            byte[] buf = new byte[8192];
+                            int read;
+                            while ((read = in.read(buf)) != -1) {
+                                out.write(buf, 0, read);
+                            }
+                        } finally {
+                            if (out != null) try { out.close(); } catch (Exception ignored) {}
+                            if (in != null) try { in.close(); } catch (Exception ignored) {}
+                        }
 
-                    if (!tmp.renameTo(target)) {
-                        target.delete();
-                        tmp.renameTo(target);
-                    }
+                        if (!tmp.renameTo(target)) {
+                            target.delete();
+                            tmp.renameTo(target);
+                        }
 
-                    publishProgress("Downloaded " + file + " (" + (target.length() / 1024 / 1024) + " MB)");
+                        publishProgress("Downloaded " + file + " (" + (target.length() / 1024 / 1024) + " MB)");
+                    } finally {
+                        conn.disconnect();
+                    }
                 } catch (Exception e) {
                     Log.e(TAG, "Download failed for " + file + ": " + e.getMessage());
                     publishProgress("Failed: " + file + " - " + e.getMessage());

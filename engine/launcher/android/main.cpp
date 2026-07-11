@@ -32,8 +32,13 @@ DLL_EXPORT int LauncherMain( int argc, char **argv ); // from launcher.cpp
 
 DLL_EXPORT int Java_com_valvesoftware_ValveActivity2_setenv(JNIEnv *jenv, jclass *jclass, jstring env, jstring value, jint over)
 {
-	Msg( "Java_com_valvesoftware_ValveActivity2_setenv %s=%s\n", jenv->GetStringUTFChars(env, NULL), jenv->GetStringUTFChars(value, NULL) );
-	return setenv( jenv->GetStringUTFChars(env, NULL), jenv->GetStringUTFChars(value, NULL), over );
+	const char *key = jenv->GetStringUTFChars(env, NULL);
+	const char *val = jenv->GetStringUTFChars(value, NULL);
+	Msg( "Java_com_valvesoftware_ValveActivity2_setenv %s=%s\n", key, val );
+	int result = setenv( key, val, over );
+	jenv->ReleaseStringUTFChars(env, key);
+	jenv->ReleaseStringUTFChars(value, val);
+	return result;
 }
 
 DLL_EXPORT void Java_com_valvesoftware_ValveActivity2_nativeOnActivityResult()
@@ -43,7 +48,9 @@ DLL_EXPORT void Java_com_valvesoftware_ValveActivity2_nativeOnActivityResult()
 
 DLL_EXPORT void Java_com_valvesoftware_ValveActivity2_setArgs(JNIEnv *env, jclass *clazz, jstring str)
 {
-	strncpy( java_args, env->GetStringUTFChars(str, NULL), sizeof java_args );
+	const char *chars = env->GetStringUTFChars(str, NULL);
+	strncpy( java_args, chars, sizeof java_args );
+	env->ReleaseStringUTFChars(str, chars);
 }
 
 void SetLauncherArgs()
@@ -53,7 +60,9 @@ void SetLauncherArgs()
 #define D(a) LauncherArgv[iLastArgs++] = (char*)a
 
 	static char binPath[2048];
-	snprintf(binPath, sizeof binPath, "%s/hl2_linux", getenv("APP_DATA_PATH") );
+	const char *appDataPath = getenv("APP_DATA_PATH");
+	if (!appDataPath) appDataPath = "/sdcard/Android/data/com.greenengine.gmod/files";
+	snprintf(binPath, sizeof binPath, "%s/hl2_linux", appDataPath);
 	D(binPath);
 
 	D("-nouserclip");
