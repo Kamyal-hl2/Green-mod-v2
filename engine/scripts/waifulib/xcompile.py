@@ -237,14 +237,13 @@ class Android:
 	def cflags(self, cxx = False):
 		cflags = []
 
-		if self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX:
+		if self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX and not self.is_clang():
 			cflags += ['--sysroot=%s' % (self.sysroot())]
-		else:
-			if self.is_host():
-				cflags += [
-					'--sysroot=%s/sysroot' % (self.gen_gcc_toolchain_path()),
-					'-isystem', '%s/usr/include/' % (self.sysroot())
-				]
+		elif self.is_host():
+			cflags += [
+				'--sysroot=%s/sysroot' % (self.gen_gcc_toolchain_path()),
+				'-isystem', '%s/usr/include/' % (self.sysroot())
+			]
 
 		cflags += ['-I%s'%i for i in self.system_stl()]+['-DANDROID', '-D__ANDROID__']
 
@@ -292,7 +291,8 @@ class Android:
 			linkflags += ['--sysroot=%s/sysroot' % (self.gen_gcc_toolchain_path())]
 
 		if self.is_clang() or self.is_host():
-			linkflags += ['-fuse-ld=lld']
+			if self.ndk_rev < 19:
+				linkflags += ['-fuse-ld=lld']
 
 		linkflags += ['-Wl,--hash-style=both','-Wl,--no-undefined']
 		return linkflags
@@ -306,18 +306,6 @@ class Android:
 			if self.ndk_rev < 18:
 				ldflags += ['-stdlib=libstdc++']
 			# NDK r18+: libc++ is the default, no -stdlib flag needed for linker
-			# For NDK r19+ with lld, add toolchain lib path for CRT files
-			if self.ndk_rev >= 19:
-				arch_triplet = 'aarch64-linux-android'
-				if self.arch in ('armeabi', 'armeabi-v7a', 'armeabi-v7a-hard'):
-					arch_triplet = 'arm-linux-androideabi'
-				elif self.arch == 'x86_64':
-					arch_triplet = 'x86_64-linux-android'
-				elif self.arch == 'x86':
-					arch_triplet = 'i686-linux-android'
-				# Only add toolchain sysroot lib (has CRT files, no libc.a)
-				toolchain_sysroot = os.path.join(self.gen_gcc_toolchain_path(), 'sysroot', 'usr', 'lib', arch_triplet)
-				ldflags += ['-L' + toolchain_sysroot]
 		if self.is_arm():
 			if self.arch == 'armeabi-v7a':
 				ldflags += ['-march=armv7-a']
