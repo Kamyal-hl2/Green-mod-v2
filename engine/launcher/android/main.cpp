@@ -19,6 +19,7 @@ GNU General Public License for more details.
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <SDL_hints.h>
 #include "tier0/dbg.h"
 #include "tier0/threadtools.h"
@@ -30,18 +31,17 @@ int iLastArgs = 0;
 extern void InitCrashHandler();
 DLL_EXPORT int LauncherMain( int argc, char **argv ); // from launcher.cpp
 
-DLL_EXPORT int Java_com_valvesoftware_ValveActivity2_setenv(JNIEnv *jenv, jclass *jclass, jstring env, jstring value, jint over)
+DLL_EXPORT void Java_com_valvesoftware_ValveActivity2_setenv(JNIEnv *jenv, jclass *jclass, jstring env, jstring value)
 {
 	const char *key = jenv->GetStringUTFChars(env, NULL);
 	const char *val = jenv->GetStringUTFChars(value, NULL);
 	Msg( "Java_com_valvesoftware_ValveActivity2_setenv %s=%s\n", key, val );
-	int result = setenv( key, val, over );
+	setenv( key, val, 1 );
 	jenv->ReleaseStringUTFChars(env, key);
 	jenv->ReleaseStringUTFChars(value, val);
-	return result;
 }
 
-DLL_EXPORT void Java_com_valvesoftware_ValveActivity2_nativeOnActivityResult()
+DLL_EXPORT void Java_com_valvesoftware_ValveActivity2_nativeOnActivityResult(JNIEnv *jenv, jclass *jclass, jint requestCode, jint resultCode, jobject data)
 {
 //	Msg( "Java_com_valvesoftware_ValveActivity_nativeOnActivityResult\n" );
 }
@@ -49,7 +49,8 @@ DLL_EXPORT void Java_com_valvesoftware_ValveActivity2_nativeOnActivityResult()
 DLL_EXPORT void Java_com_valvesoftware_ValveActivity2_setArgs(JNIEnv *env, jclass *clazz, jstring str)
 {
 	const char *chars = env->GetStringUTFChars(str, NULL);
-	strncpy( java_args, chars, sizeof java_args );
+	strncpy( java_args, chars, sizeof java_args - 1 );
+	java_args[sizeof java_args - 1] = '\0';
 	env->ReleaseStringUTFChars(str, chars);
 }
 
@@ -94,6 +95,7 @@ float GetTotalMemory()
 		return 0.f;
 
 	size_t size = fread(meminfo, 1, sizeof(meminfo), f);
+	fclose(f);
 	if( !size )
 		return 0.f;
 
@@ -101,8 +103,7 @@ float GetTotalMemory()
 
 	if( !s ) return 0.f;
 
-	sscanf(s+9, "%lld", &mem);
-	fclose(f);
+	sscanf(s+9, "%" SCNd64, &mem);
 
 	return mem/1024/1024.f;
 }

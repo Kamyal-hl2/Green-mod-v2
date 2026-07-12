@@ -15,6 +15,7 @@ GNU General Public License for more details.
 #include <stdio.h>
 #include <string.h>
 #include <dlfcn.h>
+#include <signal.h>
 #include <unwind.h>
 #include <android/log.h>
 #include "tier0/dbg.h"
@@ -22,11 +23,11 @@ GNU General Public License for more details.
 #include <inttypes.h>
 #include "libunwind/libunwind.h"
 
-struct sigaction old_sa_segv;
-struct sigaction old_sa_abrt;
-struct sigaction old_sa_bus;
-struct sigaction old_sa_fpe;
-struct sigaction old_sa_trap;
+struct sigaction old_sa_segv = {};
+struct sigaction old_sa_abrt = {};
+struct sigaction old_sa_bus = {};
+struct sigaction old_sa_fpe = {};
+struct sigaction old_sa_trap = {};
 
 #define IN_LIBGCC2 1 // means we want to define __cxxabiv1::__cxa_demangle
 namespace __cxxabiv1
@@ -164,6 +165,8 @@ static void CrashHandler( int sig, siginfo_t *si, void *uc)
 void InitCrashHandler()
 {
 	struct sigaction act;
+	memset(&act, 0, sizeof(act));
+	sigemptyset(&act.sa_mask);
 	act.sa_sigaction = CrashHandler;
 	act.sa_flags = SA_SIGINFO | SA_ONSTACK;
 	sigaction(SIGSEGV, &act, &old_sa_segv);

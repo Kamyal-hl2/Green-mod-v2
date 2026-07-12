@@ -247,7 +247,7 @@ jobs:
           # Copy any .so files found
           find chromium-armv7a -name "lib*.so" -exec cp {} artifacts/ \; 2>/dev/null || true
           # If no .so files, create marker for runtime download
-          if [ ! -f artifacts/lib*.so ]; then
+          if [ ! "$(ls artifacts/lib*.so 2>/dev/null)" ]; then
             echo "no-prebuilt-chromium" > artifacts/chromium-status.txt
             echo "Chromium will be downloaded at runtime by the launcher"
           fi
