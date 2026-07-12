@@ -285,14 +285,13 @@ class Android:
 		if self.is_host():
 			linkflags += ['--gcc-toolchain=%s' % self.gen_gcc_toolchain_path()]
 
-		if self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX and not (self.is_clang() and self.ndk_rev >= 19):
+		if self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX:
 			linkflags += ['--sysroot=%s' % (self.sysroot())]
 		elif self.is_host():
 			linkflags += ['--sysroot=%s/sysroot' % (self.gen_gcc_toolchain_path())]
 
 		if self.is_clang() or self.is_host():
-			if self.ndk_rev < 19:
-				linkflags += ['-fuse-ld=lld']
+			linkflags += ['-fuse-ld=lld']
 
 		linkflags += ['-Wl,--hash-style=both','-Wl,--no-undefined']
 		return linkflags
@@ -305,7 +304,17 @@ class Android:
 		if self.is_clang() or self.is_host():
 			if self.ndk_rev < 18:
 				ldflags += ['-stdlib=libstdc++']
-			# NDK r18+: libc++ is the default, no -stdlib flag needed for linker
+			# NDK r19+: add API-level lib path so lld finds CRT files
+			if self.ndk_rev >= 19:
+				arch_triplet = 'aarch64-linux-android'
+				if self.arch in ('armeabi', 'armeabi-v7a', 'armeabi-v7a-hard'):
+					arch_triplet = 'arm-linux-androideabi'
+				elif self.arch == 'x86_64':
+					arch_triplet = 'x86_64-linux-android'
+				elif self.arch == 'x86':
+					arch_triplet = 'i686-linux-android'
+				crt_path = os.path.join(self.sysroot(), 'usr', 'lib', arch_triplet, str(self.api))
+				ldflags += ['-L' + crt_path]
 		if self.is_arm():
 			if self.arch == 'armeabi-v7a':
 				ldflags += ['-march=armv7-a']
