@@ -353,7 +353,10 @@ def configure(conf):
 			try:
 				versions = sorted(os.listdir(clang_lib))
 				if versions:
-					conf.env.LDFLAGS += ['-L' + os.path.join(clang_lib, versions[-1], 'lib', 'linux', arch)]
+					crt_path = os.path.join(clang_lib, versions[-1], 'lib', 'linux', arch)
+					conf.env.LIBPATH = [crt_path] + conf.env.LIBPATH
+					conf.env.LDFLAGS += ['-L' + crt_path]
+					conf.env.LINKFLAGS += ['-L' + crt_path]
 			except OSError:
 				pass
 
