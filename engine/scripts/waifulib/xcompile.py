@@ -237,7 +237,7 @@ class Android:
 	def cflags(self, cxx = False):
 		cflags = []
 
-		if self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX:
+		if self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX and not self.is_clang():
 			cflags += ['--sysroot=%s' % (self.sysroot())]
 		else:
 			if self.is_host():
@@ -292,8 +292,7 @@ class Android:
 			linkflags += ['--sysroot=%s/sysroot' % (self.gen_gcc_toolchain_path())]
 
 		if self.is_clang() or self.is_host():
-			if self.ndk_rev < 19:
-				linkflags += ['-fuse-ld=lld']
+			linkflags += ['-fuse-ld=lld']
 
 		linkflags += ['-Wl,--hash-style=both','-Wl,--no-undefined']
 		return linkflags
