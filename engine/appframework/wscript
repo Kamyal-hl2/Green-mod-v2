@@ -53,6 +53,11 @@ def build(bld):
 	if bld.env.DEST_OS == 'darwin':
 		libs += ['FOUNDATION', 'APPKIT', 'IOKIT']
 
+	if bld.env.TOGLES:
+		libs += ['togles']
+	elif bld.env.GL:
+		libs += ['togl']
+
 	bld.stlib(
 		source   = source,
 		target   = PROJECT_NAME,
