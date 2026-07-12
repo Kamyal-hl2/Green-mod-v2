@@ -385,9 +385,9 @@ def post_compiler_cxx_configure(conf):
 
 	if conf.options.ANDROID_OPTS:
 		if conf.android.ndk_rev >= 18:
-			# NDK r18+: use libc++ static linking
-			conf.env.CXXFLAGS_cxxshlib += ['-static-libc++']
-			conf.env.LDFLAGS_cxxshlib += ['-static-libc++']
+			# NDK r18+: clang links libc++ dynamically by default
+			# No static linking flags needed — libc++_shared.so is available on API 21+
+			pass
 	return
 
 def post_compiler_c_configure(conf):
