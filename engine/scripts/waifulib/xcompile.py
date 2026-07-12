@@ -348,10 +348,7 @@ def configure(conf):
 		conf.env.CXXFLAGS += android.cflags(True)
 		conf.env.LINKFLAGS += android.linkflags()
 		conf.env.LDFLAGS += android.ldflags()
-		if android.ndk_rev >= 18:
-			# NDK r18+ removed gnustl, use libc++ (bundled with unified toolchain)
-			# Don't manually add -lc++_static — clang links libc++ automatically
-		else:
+		if android.ndk_rev < 18:
 			# NDK r10-r17: use gnustl (GNU STL)
 			conf.env.INCLUDES += [
 				os.path.abspath(os.path.join(android.ndk_home, 'sources', 'cxx-stl', 'gnu-libstdc++', '4.9', 'include')),
@@ -359,6 +356,7 @@ def configure(conf):
 			]
 			conf.env.STLIBPATH += [os.path.abspath(os.path.join(android.ndk_home, 'sources','cxx-stl','gnu-libstdc++','4.9','libs',stlarch))]
 			conf.env.LDFLAGS += ['-lgnustl_static']
+		# NDK r18+: clang links libc++ automatically, no manual flags needed
 
 		conf.env.HAVE_M = True
 		if android.is_hardfp():
