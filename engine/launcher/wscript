@@ -41,12 +41,7 @@ def build(bld):
 
 	defines = []
 
-	libs = ['tier0','tier1','tier2','tier3','vstdlib','steam_api','appframework','SDL2', 'UNWIND']
-
-	if bld.env.TOGLES:
-		libs += ['togles']
-	elif bld.env.GL:
-		libs += ['togl']
+	libs = ['tier0','tier1','tier2','tier3','vstdlib','steam_api','appframework','SDL2','togl', 'UNWIND']
 
 	if bld.env.DEST_OS == 'win32':
 		libs += ['USER32', 'OLE32', 'SHELL32']
