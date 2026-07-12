@@ -350,10 +350,7 @@ def configure(conf):
 		conf.env.LDFLAGS += android.ldflags()
 		if android.ndk_rev >= 18:
 			# NDK r18+ removed gnustl, use libc++ (bundled with unified toolchain)
-			clang_lib_path = os.path.join(android.gen_gcc_toolchain_path(), 'lib')
-			if os.path.isdir(clang_lib_path):
-				conf.env.STLIBPATH += [clang_lib_path]
-			conf.env.LDFLAGS += ['-lc++_static']
+			# Don't manually add -lc++_static — clang links libc++ automatically
 		else:
 			# NDK r10-r17: use gnustl (GNU STL)
 			conf.env.INCLUDES += [
