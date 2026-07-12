@@ -303,10 +303,9 @@ class Android:
 			ldflags += ['-lgcc']
 
 		if self.is_clang() or self.is_host():
-			if self.ndk_rev >= 18:
-				ldflags += ['-stdlib=libc++']
-			else:
+			if self.ndk_rev < 18:
 				ldflags += ['-stdlib=libstdc++']
+			# NDK r18+: libc++ is the default, no -stdlib flag needed for linker
 		if self.is_arm():
 			if self.arch == 'armeabi-v7a':
 				ldflags += ['-march=armv7-a']
@@ -350,6 +349,9 @@ def configure(conf):
 		conf.env.LDFLAGS += android.ldflags()
 		if android.ndk_rev >= 18:
 			# NDK r18+ removed gnustl, use libc++ (bundled with unified toolchain)
+			clang_lib_path = os.path.join(android.gen_gcc_toolchain_path(), 'lib')
+			if os.path.isdir(clang_lib_path):
+				conf.env.STLIBPATH += [clang_lib_path]
 			conf.env.LDFLAGS += ['-lc++_static']
 		else:
 			# NDK r10-r17: use gnustl (GNU STL)
@@ -387,7 +389,7 @@ def post_compiler_cxx_configure(conf):
 	conf.msg('Target binfmt', conf.env.DEST_BINFMT)
 
 	if conf.options.ANDROID_OPTS:
-		if conf.android.ndk_rev == 19:
+		if conf.android.ndk_rev >= 18:
 			# NDK r18+: use libc++ static linking
 			conf.env.CXXFLAGS_cxxshlib += ['-static-libc++']
 			conf.env.LDFLAGS_cxxshlib += ['-static-libc++']
