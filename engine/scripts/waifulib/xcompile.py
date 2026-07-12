@@ -304,18 +304,6 @@ class Android:
 		if self.is_clang() or self.is_host():
 			if self.ndk_rev < 18:
 				ldflags += ['-stdlib=libstdc++']
-			# NDK r19+: add clang lib path for CRT files (crtbegin_dynamic.o etc.)
-			if self.ndk_rev >= 19:
-				arch = 'aarch64' if self.is_arm64() else ('arm' if self.is_arm() else self.arch)
-				clang_lib_base = os.path.join(self.gen_gcc_toolchain_path(), 'lib', 'clang')
-				# Find latest clang version directory
-				try:
-					versions = sorted(os.listdir(clang_lib_base))
-					if versions:
-						crt_path = os.path.join(clang_lib_base, versions[-1], 'lib', 'linux', arch)
-						ldflags += ['-L' + crt_path]
-				except OSError:
-					pass
 		if self.is_arm():
 			if self.arch == 'armeabi-v7a':
 				ldflags += ['-march=armv7-a']
@@ -357,6 +345,18 @@ def configure(conf):
 		conf.env.CXXFLAGS += android.cflags(True)
 		conf.env.LINKFLAGS += android.linkflags()
 		conf.env.LDFLAGS += android.ldflags()
+
+		# NDK r19+: add clang lib path for CRT files (crtbegin_dynamic.o etc.)
+		if android.ndk_rev >= 19 and android.is_clang():
+			arch = 'aarch64' if android.is_arm64() else ('arm' if android.is_arm() else android.arch)
+			clang_lib = os.path.join(android.gen_gcc_toolchain_path(), 'lib', 'clang')
+			try:
+				versions = sorted(os.listdir(clang_lib))
+				if versions:
+					conf.env.LDFLAGS += ['-L' + os.path.join(clang_lib, versions[-1], 'lib', 'linux', arch)]
+			except OSError:
+				pass
+
 		if android.ndk_rev < 18:
 			# NDK r10-r17: use gnustl (GNU STL)
 			conf.env.INCLUDES += [
