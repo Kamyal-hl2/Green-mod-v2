@@ -304,17 +304,16 @@ class Android:
 		if self.is_clang() or self.is_host():
 			if self.ndk_rev < 18:
 				ldflags += ['-stdlib=libstdc++']
-			# NDK r19+: add API-level lib path so lld finds CRT files
+			# NDK r19+: add clang lib path for CRT files (crtbegin_dynamic.o etc.)
 			if self.ndk_rev >= 19:
-				arch_triplet = 'aarch64-linux-android'
-				if self.arch in ('armeabi', 'armeabi-v7a', 'armeabi-v7a-hard'):
-					arch_triplet = 'arm-linux-androideabi'
-				elif self.arch == 'x86_64':
-					arch_triplet = 'x86_64-linux-android'
-				elif self.arch == 'x86':
-					arch_triplet = 'i686-linux-android'
-				crt_path = os.path.join(self.sysroot(), 'usr', 'lib', arch_triplet, str(self.api))
-				ldflags += ['-L' + crt_path]
+				arch = 'aarch64' if self.is_arm64() else ('arm' if self.is_arm() else self.arch)
+				clang_lib_base = os.path.join(self.gen_gcc_toolchain_path(), 'lib', 'clang')
+				if os.path.isdir(clang_lib_base):
+					versions = sorted(os.listdir(clang_lib_base))
+					if versions:
+						crt_path = os.path.join(clang_lib_base, versions[-1], 'lib', 'linux', arch)
+						if os.path.isdir(crt_path):
+							ldflags += ['-L' + crt_path]
 		if self.is_arm():
 			if self.arch == 'armeabi-v7a':
 				ldflags += ['-march=armv7-a']
