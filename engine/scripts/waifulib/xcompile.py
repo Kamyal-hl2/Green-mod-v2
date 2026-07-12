@@ -308,12 +308,14 @@ class Android:
 			if self.ndk_rev >= 19:
 				arch = 'aarch64' if self.is_arm64() else ('arm' if self.is_arm() else self.arch)
 				clang_lib_base = os.path.join(self.gen_gcc_toolchain_path(), 'lib', 'clang')
-				if os.path.isdir(clang_lib_base):
+				# Find latest clang version directory
+				try:
 					versions = sorted(os.listdir(clang_lib_base))
 					if versions:
 						crt_path = os.path.join(clang_lib_base, versions[-1], 'lib', 'linux', arch)
-						if os.path.isdir(crt_path):
-							ldflags += ['-L' + crt_path]
+						ldflags += ['-L' + crt_path]
+				except OSError:
+					pass
 		if self.is_arm():
 			if self.arch == 'armeabi-v7a':
 				ldflags += ['-march=armv7-a']
