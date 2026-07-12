@@ -286,13 +286,14 @@ class Android:
 		if self.is_host():
 			linkflags += ['--gcc-toolchain=%s' % self.gen_gcc_toolchain_path()]
 
-		if self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX:
+		if self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX and not (self.is_clang() and self.ndk_rev >= 19):
 			linkflags += ['--sysroot=%s' % (self.sysroot())]
 		elif self.is_host():
 			linkflags += ['--sysroot=%s/sysroot' % (self.gen_gcc_toolchain_path())]
 
 		if self.is_clang() or self.is_host():
-			linkflags += ['-fuse-ld=lld']
+			if self.ndk_rev < 19:
+				linkflags += ['-fuse-ld=lld']
 
 		linkflags += ['-Wl,--hash-style=both','-Wl,--no-undefined']
 		return linkflags
