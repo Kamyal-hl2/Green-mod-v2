@@ -290,8 +290,9 @@ class Android:
 		elif self.is_host():
 			linkflags += ['--sysroot=%s/sysroot' % (self.gen_gcc_toolchain_path())]
 
-		# NDK r19+ clang: add API-level lib path for system libraries and CRT
-		# Don't use --sysroot alone (lld can't find CRT files through it)
+		# NDK r19+ clang: don't override linker selection, let wrapper handle it
+		# The wrapper already sets up correct paths for CRT and system libraries
+		# Add -L for system libs that SDL2 depends on
 		if self.ndk_rev >= 19 and self.is_clang():
 			arch_triplet = 'aarch64-linux-android'
 			if self.arch in ('armeabi', 'armeabi-v7a', 'armeabi-v7a-hard'):
@@ -300,25 +301,10 @@ class Android:
 				arch_triplet = 'x86_64-linux-android'
 			elif self.arch == 'x86':
 				arch_triplet = 'i686-linux-android'
-			api_lib = os.path.join(self.sysroot(), 'usr', 'lib', arch_triplet, str(self.api))
-			linkflags += ['-L' + api_lib]
-			# Also add toolchain clang lib path for CRT files
-			arch = 'aarch64' if self.is_arm64() else ('arm' if self.is_arm() else self.arch)
-			for lib_dir in ['lib64', 'lib']:
-				clang_lib = os.path.join(self.gen_gcc_toolchain_path(), lib_dir, 'clang')
-				if not os.path.isdir(clang_lib):
-					continue
-				for d in sorted(os.listdir(clang_lib)):
-					candidate = os.path.join(clang_lib, d, 'lib', 'linux', arch)
-					if os.path.isdir(candidate):
-						linkflags += ['-L' + candidate]
-						break
-				else:
-					continue
-				break
-
-		if self.is_clang() or self.is_host():
-			linkflags += ['-fuse-ld=lld']
+			linkflags += ['-L' + os.path.join(self.sysroot(), 'usr', 'lib', arch_triplet, str(self.api))]
+		else:
+			if self.is_clang() or self.is_host():
+				linkflags += ['-fuse-ld=lld']
 
 		linkflags += ['-Wl,--hash-style=both','-Wl,--no-undefined']
 		return linkflags
