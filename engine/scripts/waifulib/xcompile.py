@@ -346,7 +346,7 @@ def configure(conf):
 		conf.env.LINKFLAGS += android.linkflags()
 		conf.env.LDFLAGS += android.ldflags()
 
-		# NDK r19+: add sysroot lib path for CRT files and system libraries
+		# NDK r19+: add sysroot lib path for system libraries (libandroid.so, libGLESv2, etc.)
 		if android.ndk_rev >= 19 and android.is_clang():
 			arch_triplet = 'aarch64-linux-android'
 			if android.arch in ('armeabi', 'armeabi-v7a', 'armeabi-v7a-hard'):
@@ -355,10 +355,9 @@ def configure(conf):
 				arch_triplet = 'x86_64-linux-android'
 			elif android.arch == 'x86':
 				arch_triplet = 'i686-linux-android'
-			sysroot_lib = os.path.join(android.sysroot(), 'usr', 'lib', arch_triplet, str(android.api))
-			# Add to ALL flag variables to ensure it's passed to the linker
-			for flag_var in ['CFLAGS', 'CXXFLAGS', 'LINKFLAGS', 'LDFLAGS']:
-				conf.env[flag_var] += ['-L' + sysroot_lib]
+			sysroot_lib = os.path.join(android.sysroot(), 'usr', 'lib', arch_triplet)
+			conf.env.LINKFLAGS += ['-L' + sysroot_lib]
+			conf.env.LDFLAGS += ['-L' + sysroot_lib]
 
 		if android.ndk_rev < 18:
 			# NDK r10-r17: use gnustl (GNU STL)
