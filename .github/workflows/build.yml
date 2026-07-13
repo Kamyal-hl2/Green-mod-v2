@@ -285,7 +285,7 @@ jobs:
       - name: Checkout repo for launcher + content
         uses: actions/checkout@v4
 
-      - name: Download engine armv7a
+      - name: Download engine armv7a (CI-built)
         uses: actions/download-artifact@v4
         with:
           name: engine-armv7a
@@ -316,20 +316,28 @@ jobs:
 
       - name: Prepare jniLibs
         run: |
-          # armeabi-v7a
-          mkdir -p launcher/src/main/jniLibs/armeabi-v7a
-          find engine-armv7a -name "*.so" -exec cp {} launcher/src/main/jniLibs/armeabi-v7a/ \; 2>/dev/null || true
+          # Extract prebuilt libs from lib.zip (from source-engine-v1.17.0025)
+          # These have ALL required .so files including arm64
+          mkdir -p /tmp/prebuilt_libs
+          unzip -o lib.zip -d /tmp/prebuilt_libs/ 2>/dev/null || true
 
-          # arm64-v8a
+          # armeabi-v7a: merge prebuilt + CI-built
+          mkdir -p launcher/src/main/jniLibs/armeabi-v7a
+          cp /tmp/prebuilt_libs/lib/armeabi-v7a/*.so launcher/src/main/jniLibs/armeabi-v7a/ 2>/dev/null || true
+          cp engine-armv7a/*.so launcher/src/main/jniLibs/armeabi-v7a/ 2>/dev/null || true
+
+          # arm64-v8a: use prebuilt if CI arm64 failed
           mkdir -p launcher/src/main/jniLibs/arm64-v8a
-          find engine-arm64 -name "*.so" -exec cp {} launcher/src/main/jniLibs/arm64-v8a/ \; 2>/dev/null || true
+          cp /tmp/prebuilt_libs/lib/arm64-v8a/*.so launcher/src/main/jniLibs/arm64-v8a/ 2>/dev/null || true
+          cp engine-arm64/*.so launcher/src/main/jniLibs/arm64-v8a/ 2>/dev/null || true
 
           echo "=== armv7a ==="
+          ls launcher/src/main/jniLibs/armeabi-v7a/*.so | wc -l
           ls -lh launcher/src/main/jniLibs/armeabi-v7a/ | head -10
           echo "=== arm64 ==="
+          ls launcher/src/main/jniLibs/arm64-v8a/*.so | wc -l
           ls -lh launcher/src/main/jniLibs/arm64-v8a/ | head -10
 
-          # Check total APK size estimate
           echo "=== Total jniLibs size ==="
           du -sh launcher/src/main/jniLibs/
 
