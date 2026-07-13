@@ -86,7 +86,12 @@ jobs:
 
       - name: Build engine
         working-directory: engine
-        run: python3 waf build -v -j$(nproc)
+        run: |
+          python3 waf build -v -j$(nproc) 2>&1 | tee /tmp/build.log || {
+            echo "=== BUILD FAILED — last 100 lines ==="
+            tail -100 /tmp/build.log
+            exit 1
+          }
 
       - name: Collect artifacts
         run: |
@@ -200,7 +205,12 @@ jobs:
 
       - name: Build engine
         working-directory: engine
-        run: python3 waf build -v -j$(nproc)
+        run: |
+          python3 waf build -v -j$(nproc) 2>&1 | tee /tmp/build.log || {
+            echo "=== BUILD FAILED — last 100 lines ==="
+            tail -100 /tmp/build.log
+            exit 1
+          }
 
       - name: Collect artifacts
         run: |
