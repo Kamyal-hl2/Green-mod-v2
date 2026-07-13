@@ -502,6 +502,10 @@ def configure(conf):
 
 	cflags, linkflags = conf.get_optimization_flags()
 
+	# Add -w early so it precedes -Werror from optimization flags
+	if conf.options.DISABLE_WARNS:
+		cflags += ['-w']
+		linkflags += ['-w']
 
 	flags = []
 
@@ -520,9 +524,9 @@ def configure(conf):
 			'-I'+os.path.abspath('.')+'/thirdparty/openal-soft/include/',
 			'-I'+os.path.abspath('.')+'/thirdparty/fontconfig',
 			'-I'+os.path.abspath('.')+'/thirdparty/freetype/include',
-			'-llog',
-			'-lz'
 		]
+		# -llog and -lz are linker flags, don't add to cflags
+		linkflags += ['-llog', '-lz']
 
 		flags += ['-funwind-tables', '-g']
 	elif conf.env.COMPILER_CC != 'msvc' and conf.env.DEST_OS != 'darwin' and conf.env.DEST_CPU in ['x86', 'x86_64']:
@@ -609,6 +613,11 @@ def configure(conf):
 	conf.env.append_unique('CXXFLAGS', cxxflags)
 	conf.env.append_unique('LINKFLAGS', linkflags)
 	conf.env.append_unique('INCLUDES', [os.path.abspath('common/')])
+
+	# Ensure -w (suppress all warnings) comes AFTER -Werror so it takes precedence
+	if conf.options.DISABLE_WARNS:
+		conf.env.CFLAGS += ['-w']
+		conf.env.CXXFLAGS += ['-w']
 
 	check_deps( conf )
 
