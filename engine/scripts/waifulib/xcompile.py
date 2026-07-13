@@ -285,7 +285,11 @@ class Android:
 		if self.is_host():
 			linkflags += ['--gcc-toolchain=%s' % self.gen_gcc_toolchain_path()]
 
-		if self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX:
+		if self.ndk_rev >= 19 and self.is_clang():
+			# NDK r19+ clang: use toolchain sysroot (not unified sysroot)
+			# Unified sysroot doesn't have CRT files or system libs in lld's expected paths
+			linkflags += ['--sysroot=%s/sysroot' % (self.gen_gcc_toolchain_path())]
+		elif self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX:
 			linkflags += ['--sysroot=%s' % (self.sysroot())]
 		elif self.is_host():
 			linkflags += ['--sysroot=%s/sysroot' % (self.gen_gcc_toolchain_path())]
