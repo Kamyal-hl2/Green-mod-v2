@@ -54,7 +54,7 @@ def build(bld):
 		libs += ['FOUNDATION', 'APPKIT', 'IOKIT']
 
 	if bld.env.TOGLES:
-		libs += ['togles']
+		libs += ['togl']
 	elif bld.env.GL:
 		libs += ['togl']
 
