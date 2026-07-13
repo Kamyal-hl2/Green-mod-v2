@@ -237,7 +237,7 @@ class Android:
 	def cflags(self, cxx = False):
 		cflags = []
 
-		if self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX and not self.is_clang():
+		if self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX:
 			cflags += ['--sysroot=%s' % (self.sysroot())]
 		elif self.is_host():
 			cflags += [
