@@ -301,7 +301,11 @@ class Android:
 				arch_triplet = 'x86_64-linux-android'
 			elif self.arch == 'x86':
 				arch_triplet = 'i686-linux-android'
-			linkflags += ['-L' + os.path.join(self.sysroot(), 'usr', 'lib', arch_triplet, str(self.api))]
+			sysroot_lib = os.path.join(self.sysroot(), 'usr', 'lib', arch_triplet)
+			linkflags += [
+				'-L' + sysroot_lib,
+				'-L' + os.path.join(sysroot_lib, str(self.api)),
+			]
 		else:
 			if self.is_clang() or self.is_host():
 				linkflags += ['-fuse-ld=lld']
