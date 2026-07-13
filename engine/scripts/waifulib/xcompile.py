@@ -285,7 +285,21 @@ class Android:
 		if self.is_host():
 			linkflags += ['--gcc-toolchain=%s' % self.gen_gcc_toolchain_path()]
 
-		if self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX:
+		# For NDK r19+ clang: don't use --sysroot in linker (lld can't find CRT files there)
+		# Instead add explicit -L paths for system libs and CRT
+		if self.ndk_rev >= 19 and self.is_clang():
+			arch_triplet = 'aarch64-linux-android'
+			if self.arch in ('armeabi', 'armeabi-v7a', 'armeabi-v7a-hard'):
+				arch_triplet = 'arm-linux-androideabi'
+			elif self.arch == 'x86_64':
+				arch_triplet = 'x86_64-linux-android'
+			elif self.arch == 'x86':
+				arch_triplet = 'i686-linux-android'
+			linkflags += [
+				'-L' + os.path.join(self.sysroot(), 'usr', 'lib', arch_triplet),
+				'-L' + os.path.join(self.sysroot(), 'usr', 'lib', arch_triplet, str(self.api)),
+			]
+		elif self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX:
 			linkflags += ['--sysroot=%s' % (self.sysroot())]
 		elif self.is_host():
 			linkflags += ['--sysroot=%s/sysroot' % (self.gen_gcc_toolchain_path())]
