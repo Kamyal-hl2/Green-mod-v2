@@ -285,30 +285,17 @@ class Android:
 		if self.is_host():
 			linkflags += ['--gcc-toolchain=%s' % self.gen_gcc_toolchain_path()]
 
-		if self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX:
+		if self.ndk_rev >= 19 and self.is_clang():
+			# NDK r19+ clang: don't add --sysroot (wrapper handles it)
+			# Just use -fuse-ld=lld so clang uses lld instead of old ld
+			pass
+		elif self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX:
 			linkflags += ['--sysroot=%s' % (self.sysroot())]
 		elif self.is_host():
 			linkflags += ['--sysroot=%s/sysroot' % (self.gen_gcc_toolchain_path())]
 
-		# NDK r19+ clang: remove --sysroot, add -L for system libs
-		# Don't use -fuse-ld=lld (lets clang choose linker)
-		if self.ndk_rev >= 19 and self.is_clang():
-			linkflags = []  # Reset: no --sysroot, no -fuse-ld=lld
-			arch_triplet = 'aarch64-linux-android'
-			if self.arch in ('armeabi', 'armeabi-v7a', 'armeabi-v7a-hard'):
-				arch_triplet = 'arm-linux-androideabi'
-			elif self.arch == 'x86_64':
-				arch_triplet = 'x86_64-linux-android'
-			elif self.arch == 'x86':
-				arch_triplet = 'i686-linux-android'
-			sysroot_lib = os.path.join(self.sysroot(), 'usr', 'lib', arch_triplet)
-			linkflags += [
-				'-L' + sysroot_lib,
-				'-L' + os.path.join(sysroot_lib, str(self.api)),
-			]
-		else:
-			if self.is_clang() or self.is_host():
-				linkflags += ['-fuse-ld=lld']
+		if self.is_clang() or self.is_host():
+			linkflags += ['-fuse-ld=lld']
 
 		linkflags += ['-Wl,--hash-style=both','-Wl,--no-undefined']
 		return linkflags
