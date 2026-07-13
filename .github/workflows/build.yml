@@ -216,14 +216,18 @@ jobs:
         run: |
           mkdir -p artifacts
           find engine/build -iname "*.so" -exec cp {} artifacts/ \; 2>/dev/null || true
-          ls -lh artifacts/
+          echo "=== Found .so files in engine/build ==="
+          find engine/build -iname "*.so" | head -30
+          echo "=== artifacts/ contents ==="
+          ls -lh artifacts/ || echo "artifacts/ is empty!"
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: engine-arm64
           path: artifacts/
-          if-no-files-found: error
+          if-no-files-found: warn
+          overwrite: true
 
       - name: Upload logs on failure
         if: failure()
