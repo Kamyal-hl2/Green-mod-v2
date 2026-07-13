@@ -237,16 +237,14 @@ class Android:
 	def cflags(self, cxx = False):
 		cflags = []
 
-		if self.ndk_rev >= 19 and self.is_clang():
-			# NDK r19+ clang: use toolchain sysroot (not unified sysroot)
-			cflags += ['--sysroot=%s/sysroot' % (self.gen_gcc_toolchain_path())]
-		elif self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX:
+		if self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX:
 			cflags += ['--sysroot=%s' % (self.sysroot())]
-		elif self.is_host():
-			cflags += [
-				'--sysroot=%s/sysroot' % (self.gen_gcc_toolchain_path()),
-				'-isystem', '%s/usr/include/' % (self.sysroot())
-			]
+		else:
+			if self.is_host():
+				cflags += [
+					'--sysroot=%s/sysroot' % (self.gen_gcc_toolchain_path()),
+					'-isystem', '%s/usr/include/' % (self.sysroot())
+				]
 
 		cflags += ['-I%s'%i for i in self.system_stl()]+['-DANDROID', '-D__ANDROID__']
 
@@ -288,11 +286,7 @@ class Android:
 		if self.is_host():
 			linkflags += ['--gcc-toolchain=%s' % self.gen_gcc_toolchain_path()]
 
-		if self.ndk_rev >= 19 and self.is_clang():
-			# NDK r19+ clang: use toolchain sysroot (not unified sysroot)
-			# Unified sysroot doesn't have CRT files or system libs in lld's expected paths
-			linkflags += ['--sysroot=%s/sysroot' % (self.gen_gcc_toolchain_path())]
-		elif self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX:
+		if self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX:
 			linkflags += ['--sysroot=%s' % (self.sysroot())]
 		elif self.is_host():
 			linkflags += ['--sysroot=%s/sysroot' % (self.gen_gcc_toolchain_path())]
@@ -309,8 +303,7 @@ class Android:
 			ldflags += ['-lgcc']
 
 		if self.is_clang() or self.is_host():
-			if self.ndk_rev < 18:
-				ldflags += ['-stdlib=libstdc++']
+			ldflags += ['-stdlib=libstdc++']
 		if self.is_arm():
 			if self.arch == 'armeabi-v7a':
 				ldflags += ['-march=armv7-a']
@@ -390,10 +383,9 @@ def post_compiler_cxx_configure(conf):
 	conf.msg('Target binfmt', conf.env.DEST_BINFMT)
 
 	if conf.options.ANDROID_OPTS:
-		if conf.android.ndk_rev >= 18:
-			# NDK r18+: clang links libc++ dynamically by default
-			# No static linking flags needed — libc++_shared.so is available on API 21+
-			pass
+		if conf.android.ndk_rev == 19:
+			conf.env.CXXFLAGS_cxxshlib += ['-static-libstdc++']
+			conf.env.LDFLAGS_cxxshlib += ['-static-libstdc++']
 	return
 
 def post_compiler_c_configure(conf):

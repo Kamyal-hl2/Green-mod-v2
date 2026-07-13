@@ -83,7 +83,7 @@ public class ValveActivity2 extends Activity {
             setenv("CHROMIUM_PATH", chromiumManager.getChromiumDir().getAbsolutePath());
 
             String args = "-basedir " + externalFiles
-                + " -game " + externalFiles + "/garrysmod"
+                + " -game garrysmod"
                 + " -console -novid -nojoy -noipx";
             setArgs(args);
 
