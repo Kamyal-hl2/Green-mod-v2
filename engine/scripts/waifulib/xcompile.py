@@ -356,9 +356,9 @@ def configure(conf):
 			elif android.arch == 'x86':
 				arch_triplet = 'i686-linux-android'
 			sysroot_lib = os.path.join(android.sysroot(), 'usr', 'lib', arch_triplet, str(android.api))
-			conf.env.CFLAGS += ['-L' + sysroot_lib]
-			conf.env.CXXFLAGS += ['-L' + sysroot_lib]
-			conf.env.LINKFLAGS += ['-L' + sysroot_lib]
+			# Add to ALL flag variables to ensure it's passed to the linker
+			for flag_var in ['CFLAGS', 'CXXFLAGS', 'LINKFLAGS', 'LDFLAGS']:
+				conf.env[flag_var] += ['-L' + sysroot_lib]
 
 		if android.ndk_rev < 18:
 			# NDK r10-r17: use gnustl (GNU STL)
