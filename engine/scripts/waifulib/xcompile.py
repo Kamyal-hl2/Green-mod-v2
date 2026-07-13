@@ -237,7 +237,10 @@ class Android:
 	def cflags(self, cxx = False):
 		cflags = []
 
-		if self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX:
+		if self.ndk_rev >= 19 and self.is_clang():
+			# NDK r19+ clang: use toolchain sysroot (not unified sysroot)
+			cflags += ['--sysroot=%s/sysroot' % (self.gen_gcc_toolchain_path())]
+		elif self.ndk_rev <= ANDROID_NDK_SYSROOT_FLAG_MAX:
 			cflags += ['--sysroot=%s' % (self.sysroot())]
 		elif self.is_host():
 			cflags += [
