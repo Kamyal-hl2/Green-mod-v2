@@ -317,9 +317,9 @@ jobs:
       - name: Prepare jniLibs
         run: |
           # Extract prebuilt libs from lib.zip (from source-engine-v1.17.0025)
-          # These have ALL required .so files including arm64
           mkdir -p /tmp/prebuilt_libs
           unzip -o lib.zip -d /tmp/prebuilt_libs/ 2>/dev/null || true
+          rm -f lib.zip
 
           # armeabi-v7a: merge prebuilt + CI-built
           mkdir -p launcher/src/main/jniLibs/armeabi-v7a
@@ -331,13 +331,12 @@ jobs:
           cp /tmp/prebuilt_libs/lib/arm64-v8a/*.so launcher/src/main/jniLibs/arm64-v8a/ 2>/dev/null || true
           cp engine-arm64/*.so launcher/src/main/jniLibs/arm64-v8a/ 2>/dev/null || true
 
+          rm -rf /tmp/prebuilt_libs
+
           echo "=== armv7a ==="
           ls launcher/src/main/jniLibs/armeabi-v7a/*.so | wc -l
-          ls -lh launcher/src/main/jniLibs/armeabi-v7a/ | head -10
           echo "=== arm64 ==="
           ls launcher/src/main/jniLibs/arm64-v8a/*.so | wc -l
-          ls -lh launcher/src/main/jniLibs/arm64-v8a/ | head -10
-
           echo "=== Total jniLibs size ==="
           du -sh launcher/src/main/jniLibs/
 
