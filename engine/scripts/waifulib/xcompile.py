@@ -290,10 +290,10 @@ class Android:
 		elif self.is_host():
 			linkflags += ['--sysroot=%s/sysroot' % (self.gen_gcc_toolchain_path())]
 
-		# NDK r19+ clang: don't override linker selection, let wrapper handle it
-		# The wrapper already sets up correct paths for CRT and system libraries
-		# Add -L for system libs that SDL2 depends on
+		# NDK r19+ clang: remove --sysroot, add -L for system libs
+		# Don't use -fuse-ld=lld (lets clang choose linker)
 		if self.ndk_rev >= 19 and self.is_clang():
+			linkflags = []  # Reset: no --sysroot, no -fuse-ld=lld
 			arch_triplet = 'aarch64-linux-android'
 			if self.arch in ('armeabi', 'armeabi-v7a', 'armeabi-v7a-hard'):
 				arch_triplet = 'arm-linux-androideabi'
