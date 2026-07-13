@@ -346,23 +346,19 @@ def configure(conf):
 		conf.env.LINKFLAGS += android.linkflags()
 		conf.env.LDFLAGS += android.ldflags()
 
-		# NDK r19+: add clang lib path for CRT files (crtbegin_dynamic.o etc.)
+		# NDK r19+: add sysroot lib path for CRT files and system libraries
 		if android.ndk_rev >= 19 and android.is_clang():
-			arch = 'aarch64' if android.is_arm64() else ('arm' if android.is_arm() else android.arch)
-			for lib_dir in ['lib64', 'lib']:
-				clang_lib = os.path.join(android.gen_gcc_toolchain_path(), lib_dir, 'clang')
-				if not os.path.isdir(clang_lib):
-					continue
-				for d in sorted(os.listdir(clang_lib)):
-					candidate = os.path.join(clang_lib, d, 'lib', 'linux', arch)
-					if os.path.isdir(candidate):
-						conf.env.CFLAGS += ['-L' + candidate]
-						conf.env.CXXFLAGS += ['-L' + candidate]
-						conf.env.LINKFLAGS += ['-L' + candidate]
-						break
-				else:
-					continue
-				break
+			arch_triplet = 'aarch64-linux-android'
+			if android.arch in ('armeabi', 'armeabi-v7a', 'armeabi-v7a-hard'):
+				arch_triplet = 'arm-linux-androideabi'
+			elif android.arch == 'x86_64':
+				arch_triplet = 'x86_64-linux-android'
+			elif android.arch == 'x86':
+				arch_triplet = 'i686-linux-android'
+			sysroot_lib = os.path.join(android.sysroot(), 'usr', 'lib', arch_triplet, str(android.api))
+			conf.env.CFLAGS += ['-L' + sysroot_lib]
+			conf.env.CXXFLAGS += ['-L' + sysroot_lib]
+			conf.env.LINKFLAGS += ['-L' + sysroot_lib]
 
 		if android.ndk_rev < 18:
 			# NDK r10-r17: use gnustl (GNU STL)
