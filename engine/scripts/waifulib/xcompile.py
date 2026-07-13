@@ -349,16 +349,17 @@ def configure(conf):
 		# NDK r19+: add clang lib path for CRT files (crtbegin_dynamic.o etc.)
 		if android.ndk_rev >= 19 and android.is_clang():
 			arch = 'aarch64' if android.is_arm64() else ('arm' if android.is_arm() else android.arch)
-			clang_lib = os.path.join(android.gen_gcc_toolchain_path(), 'lib', 'clang')
-			try:
-				versions = sorted(os.listdir(clang_lib))
-				if versions:
-					crt_path = os.path.join(clang_lib, versions[-1], 'lib', 'linux', arch)
-					conf.env.LIBPATH = [crt_path] + conf.env.LIBPATH
-					conf.env.LDFLAGS += ['-L' + crt_path]
-					conf.env.LINKFLAGS += ['-L' + crt_path]
-			except OSError:
-				pass
+			crt_path = os.path.join(android.gen_gcc_toolchain_path(), 'lib', 'clang', '8.0.2', 'lib', 'linux', arch)
+			if os.path.isdir(crt_path):
+				conf.env.LIBPATH = [crt_path] + conf.env.LIBPATH
+			else:
+				# Try other clang versions
+				clang_lib = os.path.join(android.gen_gcc_toolchain_path(), 'lib', 'clang')
+				for d in sorted(os.listdir(clang_lib)):
+					candidate = os.path.join(clang_lib, d, 'lib', 'linux', arch)
+					if os.path.isdir(candidate):
+						conf.env.LIBPATH = [candidate] + conf.env.LIBPATH
+						break
 
 		if android.ndk_rev < 18:
 			# NDK r10-r17: use gnustl (GNU STL)
