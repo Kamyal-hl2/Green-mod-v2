@@ -356,11 +356,14 @@ jobs:
 
       - name: Build APK
         working-directory: launcher
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleDebug --no-daemon
 
       - name: Find and rename APK
         run: |
-          APK=$(find launcher -name "*.apk" -path "*/release/*" | head -1)
+          APK=$(find launcher -name "*.apk" -path "*/debug/*" | head -1)
+          if [ -z "$APK" ]; then
+            APK=$(find launcher -name "*.apk" -path "*/release/*" | head -1)
+          fi
           if [ -z "$APK" ]; then
             APK=$(find launcher -name "*.apk" | head -1)
           fi
