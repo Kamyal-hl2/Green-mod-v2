@@ -1,7 +1,8 @@
 package com.valvesoftware;
 
 import android.content.Context;
-import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import java.io.File;
@@ -9,6 +10,8 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Manages Chromium .so files for the in-game browser.
@@ -51,7 +54,64 @@ public class ChromiumManager {
     }
 
     public void downloadChromium(Callback callback) {
-        new DownloadTask(callback).execute(CHROMIUM_FILES);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+
+        executor.execute(() -> {
+            for (String file : CHROMIUM_FILES) {
+                File target = new File(chromiumDir, file);
+                if (target.exists()) {
+                    mainHandler.post(() -> callback.onProgress("Already exists: " + file));
+                    continue;
+                }
+                try {
+                    mainHandler.post(() -> callback.onProgress("Downloading " + file + "..."));
+                    URL url = new URL(RELEASE_BASE + "/" + file);
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setConnectTimeout(30000);
+                    conn.setReadTimeout(60000);
+                    conn.setRequestMethod("GET");
+
+                    try {
+                        if (conn.getResponseCode() != 200) {
+                            mainHandler.post(() -> callback.onProgress("Failed to download " + file + " (HTTP " + conn.getResponseCode() + ")"));
+                            continue;
+                        }
+
+                        File tmp = new File(chromiumDir, file + ".tmp");
+                        InputStream in = null;
+                        FileOutputStream out = null;
+                        try {
+                            in = conn.getInputStream();
+                            out = new FileOutputStream(tmp);
+                            byte[] buf = new byte[8192];
+                            int read;
+                            while ((read = in.read(buf)) != -1) {
+                                out.write(buf, 0, read);
+                            }
+                        } finally {
+                            if (out != null) try { out.close(); } catch (Exception ignored) {}
+                            if (in != null) try { in.close(); } catch (Exception ignored) {}
+                        }
+
+                        if (!tmp.renameTo(target)) {
+                            target.delete();
+                            tmp.renameTo(target);
+                        }
+
+                        final long sizeMB = target.length() / 1024 / 1024;
+                        mainHandler.post(() -> callback.onProgress("Downloaded " + file + " (" + sizeMB + " MB)"));
+                    } finally {
+                        conn.disconnect();
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Download failed for " + file + ": " + e.getMessage());
+                    mainHandler.post(() -> callback.onProgress("Failed: " + file + " - " + e.getMessage()));
+                }
+            }
+            final boolean result = isChromiumInstalled();
+            mainHandler.post(() -> callback.onComplete(result));
+        });
     }
 
     /**
@@ -78,82 +138,5 @@ public class ChromiumManager {
             }
         }
         return false;
-    }
-
-    private class DownloadTask extends AsyncTask<String, String, Boolean> {
-        private final Callback callback;
-
-        DownloadTask(Callback callback) {
-            this.callback = callback;
-        }
-
-        @Override
-        protected Boolean doInBackground(String... files) {
-            for (String file : files) {
-                File target = new File(chromiumDir, file);
-                if (target.exists()) {
-                    publishProgress("Already exists: " + file);
-                    continue;
-                }
-                try {
-                    publishProgress("Downloading " + file + "...");
-                    URL url = new URL(RELEASE_BASE + "/" + file);
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setConnectTimeout(30000);
-                    conn.setReadTimeout(60000);
-                    conn.setRequestMethod("GET");
-
-                    try {
-                        if (conn.getResponseCode() != 200) {
-                            publishProgress("Failed to download " + file + " (HTTP " + conn.getResponseCode() + ")");
-                            continue;
-                        }
-
-                        File tmp = new File(chromiumDir, file + ".tmp");
-                        InputStream in = null;
-                        FileOutputStream out = null;
-                        try {
-                            in = conn.getInputStream();
-                            out = new FileOutputStream(tmp);
-                            byte[] buf = new byte[8192];
-                            int read;
-                            while ((read = in.read(buf)) != -1) {
-                                out.write(buf, 0, read);
-                            }
-                        } finally {
-                            if (out != null) try { out.close(); } catch (Exception ignored) {}
-                            if (in != null) try { in.close(); } catch (Exception ignored) {}
-                        }
-
-                        if (!tmp.renameTo(target)) {
-                            target.delete();
-                            tmp.renameTo(target);
-                        }
-
-                        publishProgress("Downloaded " + file + " (" + (target.length() / 1024 / 1024) + " MB)");
-                    } finally {
-                        conn.disconnect();
-                    }
-                } catch (Exception e) {
-                    Log.e(TAG, "Download failed for " + file + ": " + e.getMessage());
-                    publishProgress("Failed: " + file + " - " + e.getMessage());
-                }
-            }
-            return isChromiumInstalled();
-        }
-
-        @Override
-        protected void onProgressUpdate(String... values) {
-            if (callback != null && values.length > 0) {
-                callback.onProgress(values[0]);
-            }
-        }
-
-        @Override
-        protected void onPostExecute(Boolean success) {
-            if (callback != null) {
-                callback.onComplete(success);
-            }
-        }
     }
 }

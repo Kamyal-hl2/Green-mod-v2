@@ -237,34 +237,17 @@ jobs:
           path: engine/build/config.log
 
   # ============================================================
-  # Chromium: download prebuilt CEF for Android
+  # Chromium: placeholder — real Chromium downloaded at runtime
   # ============================================================
   build-chromium:
     runs-on: ubuntu-22.04
-    timeout-minutes: 30
+    timeout-minutes: 5
     steps:
-      - name: Download CEF binary for arm
-        run: |
-          mkdir -p chromium-armv7a
-          # CEF Android builds from official Spotify CDN
-          # Minimal set of .so files needed for in-game browser
-          CEF_URL="https://cef-builds.spotifycdn.com/cef_binary_131.3.5+gba7e4b0+chromium-131.0.6778.265_linux64_minimal.tar.bz2"
-          echo "Attempting CEF download..."
-          wget -q --timeout=120 --tries=3 "$CEF_URL" -O /tmp/cef-arm.tar.bz2 2>/dev/null && \
-            tar -xjf /tmp/cef-arm.tar.bz2 -C chromium-armv7a --strip-components=1 2>/dev/null && \
-            echo "CEF downloaded" || echo "CEF download failed - will use runtime download"
-          ls -lh chromium-armv7a/ 2>/dev/null | head -10
-
-      - name: Package chromium artifacts
+      - name: Create chromium placeholder
         run: |
           mkdir -p artifacts
-          # Copy any .so files found
-          find chromium-armv7a -name "lib*.so" -exec cp {} artifacts/ \; 2>/dev/null || true
-          # If no .so files, create marker for runtime download
-          if [ ! "$(ls artifacts/lib*.so 2>/dev/null)" ]; then
-            echo "no-prebuilt-chromium" > artifacts/chromium-status.txt
-            echo "Chromium will be downloaded at runtime by the launcher"
-          fi
+          echo "runtime-download-required" > artifacts/chromium-status.txt
+          echo "Chromium .so files are downloaded at first launch by ChromiumManager"
           ls -lh artifacts/
 
       - name: Upload
@@ -278,7 +261,7 @@ jobs:
   # Package APK (engine only, no chromium in APK)
   # ============================================================
   package-apk:
-    needs: [build-engine-armv7a]
+    needs: [build-engine-armv7a, build-engine-arm64]
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
@@ -291,9 +274,8 @@ jobs:
           name: engine-armv7a
           path: engine-armv7a/
 
-      - name: Download engine arm64 (optional)
+      - name: Download engine arm64 (CI-built)
         uses: actions/download-artifact@v4
-        continue-on-error: true
         with:
           name: engine-arm64
           path: engine-arm64/
@@ -302,7 +284,7 @@ jobs:
         run: |
           echo "=== engine-armv7a ==="
           ls engine-armv7a/*.so 2>/dev/null | wc -l
-          echo "=== arm64 ==="
+          echo "=== engine-arm64 ==="
           ls engine-arm64/*.so 2>/dev/null | wc -l
 
       - name: Setup JDK 17
@@ -316,29 +298,38 @@ jobs:
 
       - name: Prepare jniLibs
         run: |
-          # Extract prebuilt libs from lib.zip (from source-engine-v1.17.0025)
-          mkdir -p /tmp/prebuilt_libs
-          unzip -o lib.zip -d /tmp/prebuilt_libs/ 2>/dev/null || true
-          rm -f lib.zip
+          set -e
 
-          # armeabi-v7a: merge prebuilt + CI-built
+          # armeabi-v7a: CI-built + fallback to prebuilt from repo
           mkdir -p launcher/src/main/jniLibs/armeabi-v7a
-          cp /tmp/prebuilt_libs/lib/armeabi-v7a/*.so launcher/src/main/jniLibs/armeabi-v7a/ 2>/dev/null || true
           cp engine-armv7a/*.so launcher/src/main/jniLibs/armeabi-v7a/ 2>/dev/null || true
+          ARMV7A_COUNT=$(ls launcher/src/main/jniLibs/armeabi-v7a/*.so 2>/dev/null | wc -l)
+          echo "armv7a from CI: ${ARMV7A_COUNT} .so files"
+          if [ "$ARMV7A_COUNT" -lt 10 ]; then
+            echo "CI armv7a produced few .so, using prebuilt fallback from engine/lib/android/arm/"
+            cp engine/lib/android/arm/*.so launcher/src/main/jniLibs/armeabi-v7a/ 2>/dev/null || true
+          fi
 
-          # arm64-v8a: use prebuilt if CI arm64 failed
+          # arm64-v8a: CI-built + fallback to prebuilt from repo
           mkdir -p launcher/src/main/jniLibs/arm64-v8a
-          cp /tmp/prebuilt_libs/lib/arm64-v8a/*.so launcher/src/main/jniLibs/arm64-v8a/ 2>/dev/null || true
           cp engine-arm64/*.so launcher/src/main/jniLibs/arm64-v8a/ 2>/dev/null || true
+          ARM64_COUNT=$(ls launcher/src/main/jniLibs/arm64-v8a/*.so 2>/dev/null | wc -l)
+          echo "arm64 from CI: ${ARM64_COUNT} .so files"
+          if [ "$ARM64_COUNT" -lt 10 ]; then
+            echo "CI arm64 produced few .so, using prebuilt fallback from engine/lib/android/aarch64/"
+            cp engine/lib/android/aarch64/*.so launcher/src/main/jniLibs/arm64-v8a/ 2>/dev/null || true
+          fi
 
-          rm -rf /tmp/prebuilt_libs
-
-          echo "=== armv7a ==="
-          ls launcher/src/main/jniLibs/armeabi-v7a/*.so | wc -l
-          echo "=== arm64 ==="
-          ls launcher/src/main/jniLibs/arm64-v8a/*.so | wc -l
+          ARMV7A_FINAL=$(ls launcher/src/main/jniLibs/armeabi-v7a/*.so 2>/dev/null | wc -l)
+          ARM64_FINAL=$(ls launcher/src/main/jniLibs/arm64-v8a/*.so 2>/dev/null | wc -l)
+          echo "=== Final: armv7a=${ARMV7A_FINAL}, arm64=${ARM64_FINAL} ==="
           echo "=== Total jniLibs size ==="
           du -sh launcher/src/main/jniLibs/
+
+          if [ "$ARMV7A_FINAL" -eq 0 ]; then
+            echo "ERROR: No armv7a .so files found!"
+            exit 1
+          fi
 
       - name: Prepare garrysmod assets
         run: |
@@ -347,12 +338,16 @@ jobs:
           echo "=== Assets size ==="
           du -sh launcher/src/main/assets/garrysmod/
 
-      - name: Download Gradle Wrapper
+      - name: Setup Gradle Wrapper
         working-directory: launcher
         run: |
-          wget -q https://services.gradle.org/distributions/gradle-8.4-bin.zip -O /tmp/gradle.zip
-          unzip -q /tmp/gradle.zip -d /tmp/
-          /tmp/gradle-8.4/bin/gradle wrapper --gradle-version 8.4
+          # gradle-wrapper.jar is not committed — generate it
+          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+            wget -q https://services.gradle.org/distributions/gradle-8.4-bin.zip -O /tmp/gradle.zip
+            unzip -q /tmp/gradle.zip -d /tmp/
+            /tmp/gradle-8.4/bin/gradle wrapper --gradle-version 8.4
+            rm -rf /tmp/gradle-8.4 /tmp/gradle.zip
+          fi
 
       - name: Build APK
         working-directory: launcher

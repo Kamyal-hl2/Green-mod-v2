@@ -53,7 +53,7 @@ public class GModView extends GLSurfaceView {
     }
 
     public void onDestroy() {
-        // Nothing to clean up - SDL2 handles GL context cleanup
+        super.onDestroy();
     }
 
     private static class Renderer implements GLSurfaceView.Renderer {
