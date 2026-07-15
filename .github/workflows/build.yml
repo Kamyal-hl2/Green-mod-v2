@@ -226,7 +226,7 @@ jobs:
         with:
           name: engine-arm64
           path: artifacts/
-          if-no-files-found: warn
+          if-no-files-found: error
           overwrite: true
 
       - name: Upload logs on failure

@@ -21,7 +21,14 @@ public class GModView extends GLSurfaceView {
 
         // Request OpenGL ES 3.0
         setEGLContextClientVersion(3);
-        setEGLConfigChooser(8, 8, 8, 8, 16, 0);
+
+        // Try best config first, fallback to simpler config
+        try {
+            setEGLConfigChooser(8, 8, 8, 8, 16, 0);
+        } catch (IllegalArgumentException e) {
+            Log.w(TAG, "Preferred EGL config not supported, using default");
+            setEGLConfigChooser(true);
+        }
 
         // Set renderer
         setRenderer(new Renderer());

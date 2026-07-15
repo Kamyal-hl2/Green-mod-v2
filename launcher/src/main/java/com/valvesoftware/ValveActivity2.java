@@ -22,6 +22,8 @@ import android.widget.TextView;
 public class ValveActivity2 extends Activity {
     private static final String TAG = "ValveActivity2";
 
+    private static boolean nativeLibsLoaded = false;
+
     static {
         boolean sdlLoaded = false;
         try {
@@ -33,6 +35,7 @@ public class ValveActivity2 extends Activity {
         if (sdlLoaded) {
             try {
                 System.loadLibrary("launcher");
+                nativeLibsLoaded = true;
             } catch (UnsatisfiedLinkError e) {
                 Log.e(TAG, "Failed to load liblauncher.so: " + e.getMessage());
             }
@@ -161,6 +164,15 @@ public class ValveActivity2 extends Activity {
     }
 
     private void startEngine() {
+        if (!nativeLibsLoaded) {
+            new AlertDialog.Builder(this)
+                .setTitle("Engine Error")
+                .setMessage("Failed to load native engine libraries. The game cannot start.\n\nPlease reinstall the app or check that all .so files are present.")
+                .setPositiveButton("Exit", (dialog, which) -> finish())
+                .setCancelable(false)
+                .show();
+            return;
+        }
         view = new GModView(this);
         setContentView(view);
         hideSystemUI();

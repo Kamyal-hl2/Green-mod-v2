@@ -53,64 +53,93 @@ public class ChromiumManager {
         return chromiumDir;
     }
 
+    private static final int MAX_RETRIES = 3;
+
     public void downloadChromium(Callback callback) {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         Handler mainHandler = new Handler(Looper.getMainLooper());
 
         executor.execute(() -> {
-            for (String file : CHROMIUM_FILES) {
-                File target = new File(chromiumDir, file);
-                if (target.exists()) {
-                    mainHandler.post(() -> callback.onProgress("Already exists: " + file));
-                    continue;
-                }
-                try {
-                    mainHandler.post(() -> callback.onProgress("Downloading " + file + "..."));
-                    URL url = new URL(RELEASE_BASE + "/" + file);
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setConnectTimeout(30000);
-                    conn.setReadTimeout(60000);
-                    conn.setRequestMethod("GET");
-
-                    try {
-                        if (conn.getResponseCode() != 200) {
-                            mainHandler.post(() -> callback.onProgress("Failed to download " + file + " (HTTP " + conn.getResponseCode() + ")"));
-                            continue;
-                        }
-
-                        File tmp = new File(chromiumDir, file + ".tmp");
-                        InputStream in = null;
-                        FileOutputStream out = null;
-                        try {
-                            in = conn.getInputStream();
-                            out = new FileOutputStream(tmp);
-                            byte[] buf = new byte[8192];
-                            int read;
-                            while ((read = in.read(buf)) != -1) {
-                                out.write(buf, 0, read);
-                            }
-                        } finally {
-                            if (out != null) try { out.close(); } catch (Exception ignored) {}
-                            if (in != null) try { in.close(); } catch (Exception ignored) {}
-                        }
-
-                        if (!tmp.renameTo(target)) {
-                            target.delete();
-                            tmp.renameTo(target);
-                        }
-
-                        final long sizeMB = target.length() / 1024 / 1024;
-                        mainHandler.post(() -> callback.onProgress("Downloaded " + file + " (" + sizeMB + " MB)"));
-                    } finally {
-                        conn.disconnect();
+            try {
+                for (String file : CHROMIUM_FILES) {
+                    File target = new File(chromiumDir, file);
+                    if (target.exists()) {
+                        mainHandler.post(() -> callback.onProgress("Already exists: " + file));
+                        continue;
                     }
-                } catch (Exception e) {
-                    Log.e(TAG, "Download failed for " + file + ": " + e.getMessage());
-                    mainHandler.post(() -> callback.onProgress("Failed: " + file + " - " + e.getMessage()));
+                    boolean downloaded = false;
+                    for (int attempt = 1; attempt <= MAX_RETRIES && !downloaded; attempt++) {
+                        try {
+                            final int attemptNum = attempt;
+                            mainHandler.post(() -> callback.onProgress("Downloading " + file + " (attempt " + attemptNum + "/" + MAX_RETRIES + ")..."));
+                            URL url = new URL(RELEASE_BASE + "/" + file);
+                            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                            conn.setConnectTimeout(30000);
+                            conn.setReadTimeout(120000);
+                            conn.setRequestMethod("GET");
+                            conn.setInstanceFollowRedirects(true);
+
+                            try {
+                                if (conn.getResponseCode() != 200) {
+                                    mainHandler.post(() -> callback.onProgress("Failed to download " + file + " (HTTP " + conn.getResponseCode() + ")"));
+                                    continue;
+                                }
+
+                                int totalSize = conn.getContentLength();
+                                File tmp = new File(chromiumDir, file + ".tmp");
+                                InputStream in = null;
+                                FileOutputStream out = null;
+                                try {
+                                    in = conn.getInputStream();
+                                    out = new FileOutputStream(tmp);
+                                    byte[] buf = new byte[8192];
+                                    int read;
+                                    long downloadedBytes = 0;
+                                    while ((read = in.read(buf)) != -1) {
+                                        out.write(buf, 0, read);
+                                        downloadedBytes += read;
+                                        if (totalSize > 0) {
+                                            final int percent = (int) (downloadedBytes * 100 / totalSize);
+                                            final long dlMB = downloadedBytes / 1024 / 1024;
+                                            final long totalMB = totalSize / 1024 / 1024;
+                                            mainHandler.post(() -> callback.onProgress(file + ": " + dlMB + "/" + totalMB + " MB (" + percent + "%)"));
+                                        }
+                                    }
+                                } finally {
+                                    if (out != null) try { out.close(); } catch (Exception ignored) {}
+                                    if (in != null) try { in.close(); } catch (Exception ignored) {}
+                                }
+
+                                if (!tmp.renameTo(target)) {
+                                    target.delete();
+                                    tmp.renameTo(target);
+                                }
+
+                                final long sizeMB = target.length() / 1024 / 1024;
+                                mainHandler.post(() -> callback.onProgress("Downloaded " + file + " (" + sizeMB + " MB)"));
+                                downloaded = true;
+                            } finally {
+                                conn.disconnect();
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "Download attempt " + attempt + " failed for " + file + ": " + e.getMessage());
+                            mainHandler.post(() -> callback.onProgress("Retry " + attempt + "/" + MAX_RETRIES + " for " + file + "..."));
+                            if (attempt == MAX_RETRIES) {
+                                mainHandler.post(() -> callback.onProgress("Failed after " + MAX_RETRIES + " attempts: " + file));
+                            }
+                            try { Thread.sleep(2000 * attempt); } catch (InterruptedException ignored) {}
+                        }
+                    }
+                    if (!downloaded) {
+                        final File tmp = new File(chromiumDir, file + ".tmp");
+                        if (tmp.exists()) tmp.delete();
+                    }
                 }
+                final boolean result = isChromiumInstalled();
+                mainHandler.post(() -> callback.onComplete(result));
+            } finally {
+                executor.shutdown();
             }
-            final boolean result = isChromiumInstalled();
-            mainHandler.post(() -> callback.onComplete(result));
         });
     }
 
