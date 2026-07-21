@@ -213,6 +213,18 @@ class Android:
 
 	def system_stl(self):
 		# TODO: proper STL support
+		# NDK r19+ has a unified sysroot with all libc/libstdc++ headers.
+		# sources/android/support/include is a legacy shim for older NDK: its
+		# math.h/stdlib.h/wchar.h wrappers #include <c++/v1/math.h> etc., which
+		# break C++ builds for arm64 + API 21 with:
+		#   error: no member named 'fabsf' in the global namespace
+		#   error: no member named 'strtoul' in the global namespace
+		# because libc symbols are not yet in global namespace. For arm64 +
+		# NDK r19+ we skip this include path entirely — the unified sysroot
+		# already provides math.h/stdlib.h directly without the broken C++
+		# redirect.
+		if self.ndk_rev >= 19 and self.is_arm64():
+			return []
 		return [
 			#os.path.abspath(os.path.join(self.ndk_home, 'sources', 'cxx-stl', 'system', 'include')),
 			os.path.abspath(os.path.join(self.ndk_home, 'sources', 'android', 'support', 'include'))
