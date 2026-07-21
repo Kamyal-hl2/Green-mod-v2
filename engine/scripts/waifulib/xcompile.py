@@ -410,17 +410,17 @@ def post_compiler_cxx_configure(conf):
 	if conf.options.ANDROID_OPTS:
 		if conf.android.ndk_rev == 19:
 			# NDK r19c ships libc++ (not libstdc++) as the default STL.
-			# -static-libstdc++ is a no-op here: libstdc++.a doesn't exist in
-			# r19c, so the linker can't find C++ runtime symbols like
-			# __gxx_personality_v0, __cxa_throw, std::terminate, vtables for
-			# __cxxabiv1::__class_type_info, etc. Result: every .so link fails
-			# with "undefined symbol: __gxx_personality_v0".
-			# Use -static-libc++ IN LDFLAGS ONLY (it's a linker flag, clang++
-			# refuses it as a compile flag). libc++_static.a is shipped at
-			# sources/cxx-stl/llvm-libc++/libs/<arch>/libc++_static.a and this
-			# pulls the C++ runtime into each .so so we don't need
-			# libc++_shared.so at app startup.
-			conf.env.LDFLAGS_cxxshlib += ['-static-libc++']
+			# -static-libstdc++ was a no-op (libstdc++.a doesn't exist in
+			# r19c) and -static-libc++ is rejected by r19c's clang++
+			# ("unknown argument") because that flag was only added in NDK r21+.
+			# To statically link libc++ in NDK r19c, add the libc++ static
+			# lib path directly and add -lc++_static on link. This avoids
+			# needing libc++_shared.so at app startup.
+			stlarch = 'arm64-v8a' if conf.android.is_arm64() else 'armeabi-v7a'
+			libcpp_dir = os.path.abspath(os.path.join(
+				conf.android.ndk_home, 'sources', 'cxx-stl', 'llvm-libc++', 'libs', stlarch
+			))
+			conf.env.LDFLAGS_cxxshlib += ['-L' + libcpp_dir, '-lc++_static']
 	return
 
 def post_compiler_c_configure(conf):
