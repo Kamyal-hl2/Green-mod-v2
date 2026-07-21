@@ -415,11 +415,11 @@ def post_compiler_cxx_configure(conf):
 			# __gxx_personality_v0, __cxa_throw, std::terminate, vtables for
 			# __cxxabiv1::__class_type_info, etc. Result: every .so link fails
 			# with "undefined symbol: __gxx_personality_v0".
-			# Instead use -static-libc++ (libc++ static runtime is shipped:
-			#   sources/cxx-stl/llvm-libc++/libs/<stlarch>/libc++_static.a).
-			# This pulls the C++ runtime into each .so so they don't need a
-			# shared libc++_shared.so at app startup.
-			conf.env.CXXFLAGS_cxxshlib += ['-static-libc++']
+			# Use -static-libc++ IN LDFLAGS ONLY (it's a linker flag, clang++
+			# refuses it as a compile flag). libc++_static.a is shipped at
+			# sources/cxx-stl/llvm-libc++/libs/<arch>/libc++_static.a and this
+			# pulls the C++ runtime into each .so so we don't need
+			# libc++_shared.so at app startup.
 			conf.env.LDFLAGS_cxxshlib += ['-static-libc++']
 	return
 
