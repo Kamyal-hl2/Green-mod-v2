@@ -197,6 +197,41 @@ jobs:
           echo "=== lib/android/aarch64 ==="
           ls -lh engine/lib/android/aarch64/
 
+      - name: Patch NDK r19c math.h for arm64 + API 21
+        run: |
+          set -e
+          # NDK r19c bug: sources/android/support/include/math.h on line 32 includes
+          # <c++/v1/math.h>, which then fails with:
+          #   error: no member named 'fabsf' in the global namespace
+          # because the C++ wrapper expects libc math symbols to already be in
+          # global namespace (from sysroot libc <math.h>). For arm64 + API 21
+          # the include order is broken.
+          # Fix: replace the android/support/include/math.h shim with a passthrough
+          # to the real libc <math.h> from the NDK unified sysroot.
+          SUPPORT_MATH="${{ github.workspace }}/ndk/android-ndk-r19c/sources/android/support/include/math.h"
+          if [ -f "$SUPPORT_MATH" ]; then
+            echo "=== Before patch ==="
+            head -40 "$SUPPORT_MATH"
+            cp "$SUPPORT_MATH" "$SUPPORT_MATH.bak"
+            cat > "$SUPPORT_MATH" <<'EOF'
+          /* Patched by Green-mod-v2 CI to fix NDK r19c + arm64 + API 21 build.
+           * Original shim included <c++/v1/math.h> directly, which broke C++ builds
+           * because libc math symbols (fabsf, acosf, ...) were not yet declared in
+           * the global namespace. The real libc <math.h> is in the unified sysroot:
+           *   sysroot/usr/include/math.h
+           * The compiler finds it automatically via the ndk wrapper without -I.
+           */
+          #ifndef _ANDROID_PATCHED_SUPPORT_MATH_H
+          #define _ANDROID_PATCHED_SUPPORT_MATH_H
+          #include_next <math.h>
+          #endif
+          EOF
+            echo "=== After patch ==="
+            cat "$SUPPORT_MATH"
+          else
+            echo "WARNING: support/include/math.h not found, skipping patch"
+          fi
+
       - name: Configure WAF
         working-directory: engine
         run: |

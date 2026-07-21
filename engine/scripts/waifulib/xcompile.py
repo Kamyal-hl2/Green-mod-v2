@@ -251,14 +251,6 @@ class Android:
 
 		cflags += ['-I%s'%i for i in self.system_stl()]+['-DANDROID', '-D__ANDROID__']
 
-		# Workaround for NDK r19c + API 21 bug: C++ <math.h> wrapper (c++/v1/math.h)
-		# fails to find libc math functions (fabsf, acosf, ...) in global namespace.
-		# Force-include libc <math.h> FIRST, so the C++ wrapper sees the declarations.
-		# IMPORTANT: only for C++ (cxx=True), not C — waf's C sanity-check (test.c)
-		# fails with bare `-include math.h` during configure.
-		if cxx and self.ndk_rev >= 19 and self.is_clang() and self.is_arm64():
-			cflags += ['-include', 'math.h']
-
 		if cxx and not self.is_clang() and self.toolchain not in ['4.8','4.9']:
 			cflags += ['-fno-sized-deallocation']
 
