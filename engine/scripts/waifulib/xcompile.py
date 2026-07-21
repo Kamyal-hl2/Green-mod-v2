@@ -321,7 +321,14 @@ class Android:
 			ldflags += ['-lgcc']
 
 		if self.is_clang() or self.is_host():
-			ldflags += ['-stdlib=libstdc++']
+			# NDK r19+ clang defaults to libc++. Forcing -stdlib=libstdc++
+			# pulls in the old GNU STL which doesn't exist in r19c, breaking
+			# final link with undefined __gxx_personality_v0, __cxa_throw, etc.
+			# For NDK r19+ use libc++; for older NDKs keep libstdc++ (gnu-libstdc++).
+			if self.ndk_rev >= 19:
+				ldflags += ['-stdlib=libc++']
+			else:
+				ldflags += ['-stdlib=libstdc++']
 		if self.is_arm():
 			if self.arch == 'armeabi-v7a':
 				ldflags += ['-march=armv7-a']
@@ -402,8 +409,18 @@ def post_compiler_cxx_configure(conf):
 
 	if conf.options.ANDROID_OPTS:
 		if conf.android.ndk_rev == 19:
-			conf.env.CXXFLAGS_cxxshlib += ['-static-libstdc++']
-			conf.env.LDFLAGS_cxxshlib += ['-static-libstdc++']
+			# NDK r19c ships libc++ (not libstdc++) as the default STL.
+			# -static-libstdc++ is a no-op here: libstdc++.a doesn't exist in
+			# r19c, so the linker can't find C++ runtime symbols like
+			# __gxx_personality_v0, __cxa_throw, std::terminate, vtables for
+			# __cxxabiv1::__class_type_info, etc. Result: every .so link fails
+			# with "undefined symbol: __gxx_personality_v0".
+			# Instead use -static-libc++ (libc++ static runtime is shipped:
+			#   sources/cxx-stl/llvm-libc++/libs/<stlarch>/libc++_static.a).
+			# This pulls the C++ runtime into each .so so they don't need a
+			# shared libc++_shared.so at app startup.
+			conf.env.CXXFLAGS_cxxshlib += ['-static-libc++']
+			conf.env.LDFLAGS_cxxshlib += ['-static-libc++']
 	return
 
 def post_compiler_c_configure(conf):
