@@ -60,7 +60,6 @@ public class GModView extends GLSurfaceView {
     }
 
     public void onDestroy() {
-        super.onDestroy();
     }
 
     private static class Renderer implements GLSurfaceView.Renderer {

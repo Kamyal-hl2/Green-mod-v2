@@ -69,8 +69,8 @@ public class ChromiumManager {
                     }
                     boolean downloaded = false;
                     for (int attempt = 1; attempt <= MAX_RETRIES && !downloaded; attempt++) {
+                        final int attemptNum = attempt;
                         try {
-                            final int attemptNum = attempt;
                             mainHandler.post(() -> callback.onProgress("Downloading " + file + " (attempt " + attemptNum + "/" + MAX_RETRIES + ")..."));
                             URL url = new URL(RELEASE_BASE + "/" + file);
                             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -80,8 +80,9 @@ public class ChromiumManager {
                             conn.setInstanceFollowRedirects(true);
 
                             try {
-                                if (conn.getResponseCode() != 200) {
-                                    mainHandler.post(() -> callback.onProgress("Failed to download " + file + " (HTTP " + conn.getResponseCode() + ")"));
+                                final int responseCode = conn.getResponseCode();
+                                if (responseCode != 200) {
+                                    mainHandler.post(() -> callback.onProgress("Failed to download " + file + " (HTTP " + responseCode + ")"));
                                     continue;
                                 }
 
@@ -122,12 +123,12 @@ public class ChromiumManager {
                                 conn.disconnect();
                             }
                         } catch (Exception e) {
-                            Log.e(TAG, "Download attempt " + attempt + " failed for " + file + ": " + e.getMessage());
-                            mainHandler.post(() -> callback.onProgress("Retry " + attempt + "/" + MAX_RETRIES + " for " + file + "..."));
-                            if (attempt == MAX_RETRIES) {
+                            Log.e(TAG, "Download attempt " + attemptNum + " failed for " + file + ": " + e.getMessage());
+                            mainHandler.post(() -> callback.onProgress("Retry " + attemptNum + "/" + MAX_RETRIES + " for " + file + "..."));
+                            if (attemptNum == MAX_RETRIES) {
                                 mainHandler.post(() -> callback.onProgress("Failed after " + MAX_RETRIES + " attempts: " + file));
                             }
-                            try { Thread.sleep(2000 * attempt); } catch (InterruptedException ignored) {}
+                            try { Thread.sleep(2000 * attemptNum); } catch (InterruptedException ignored) {}
                         }
                     }
                     if (!downloaded) {
