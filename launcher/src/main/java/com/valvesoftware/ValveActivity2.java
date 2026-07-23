@@ -1,248 +1,123 @@
 package com.valvesoftware;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.os.Build;
+import android.app.Activity;
+import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.graphics.Point;
 import android.os.Bundle;
+import android.view.Display;
+import java.util.HashMap;
+import java.io.File;
+import java.util.Locale;
+import org.libsdl.app.SDLActivity;
+import me.nillerusr.LauncherActivity;
+import android.content.SharedPreferences;
+import android.content.Context;
 import android.util.Log;
-import android.view.View;
-import android.view.Window;
-import android.view.WindowInsets;
-import android.view.WindowInsetsController;
-import android.view.WindowManager;
-import android.widget.TextView;
+import me.nillerusr.ExtractAssets;
 
-/**
- * Android Activity for Green Engine (Garry's Mod port).
- * Bridges Java lifecycle to native engine via JNI.
- *
- * Supports optional Chromium runtime download for in-game browser.
- */
-public class ValveActivity2 extends Activity {
-    private static final String TAG = "ValveActivity2";
+public class ValveActivity2 { // not activity, i am lazy to change native methods
+	private static Activity mSingleton;
+	public static SharedPreferences mPref;
 
-    private static boolean nativeLibsLoaded = false;
 
-    static {
-        boolean sdlLoaded = false;
-        try {
-            System.loadLibrary("SDL2");
-            sdlLoaded = true;
-        } catch (UnsatisfiedLinkError e) {
-            Log.e(TAG, "Failed to load libSDL2.so: " + e.getMessage());
-        }
-        if (sdlLoaded) {
-            try {
-                System.loadLibrary("launcher");
-                nativeLibsLoaded = true;
-            } catch (UnsatisfiedLinkError e) {
-                Log.e(TAG, "Failed to load liblauncher.so: " + e.getMessage());
-            }
-        }
-    }
+	public static native void setArgs(String args);
+	public static native int setenv(String name, String value, int overwrite);
+	private static native void nativeOnActivityResult(Activity activity, int i, int i2, Intent intent);
 
-    public static native void setenv(String key, String value);
-    public static native void setArgs(String args);
-    public static native void nativeOnActivityResult(int requestCode, int resultCode, android.content.Intent data);
+	public static boolean findGameinfo(String path)
+	{
+		File dir = new File(path);
+		if( !dir.isDirectory() )
+			return false;
 
-    private GModView view;
-    private ChromiumManager chromiumManager;
+		for( File file : dir.listFiles() )
+		{
+			if( file.isDirectory() )
+			{
+				for( File f : file.listFiles() )
+				{
+					if( f.getName().toLowerCase().equals("gameinfo.txt") )
+						return true;
+				}
+			}
+		}
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+		return false;
+	}
 
-        // requestWindowFeature must be called BEFORE any view operations
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
-        getWindow().setFlags(
-            WindowManager.LayoutParams.FLAG_FULLSCREEN,
-            WindowManager.LayoutParams.FLAG_FULLSCREEN
-        );
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+	static public boolean isModGameinfoExists(String path)
+	{
+		File dir = new File(path);
+		if( !dir.isDirectory() )
+			return false;
 
-        chromiumManager = new ChromiumManager(this);
+		for( File file : dir.listFiles() )
+		{
+			if( file.isFile() && file.getName().toLowerCase().equals("gameinfo.txt") )
+				return true;
+		}
 
-        setupEngineEnvironment();
+		return false;
+	}
 
-        if (chromiumManager.isChromiumInstalled()) {
-            Log.i(TAG, "Chromium already installed");
-            startEngine();
-        } else {
-            promptChromiumDownload();
-        }
+	static public boolean preInit(Context context, Intent intent)
+	{
+		mPref = context.getSharedPreferences("mod", 0);
+		String gamepath = mPref.getString("gamepath", LauncherActivity.getDefaultDir() + "/srceng");
+		String gamedir = intent.getStringExtra("gamedir");
+		if( gamedir == null || gamedir.isEmpty() )
+			gamedir = "hl2";
 
-        hideSystemUI();
-    }
+		if( !findGameinfo(gamepath) || !isModGameinfoExists(gamepath+"/"+gamedir) )
+			return false;
 
-    private void setupEngineEnvironment() {
-        try {
-            String filesDir = getFilesDir().getAbsolutePath();
-            String cacheDir = getCacheDir().getAbsolutePath();
-            String externalFiles = getExternalFilesDir(null) != null
-                ? getExternalFilesDir(null).getAbsolutePath() : filesDir;
+		return true;
+	}
 
-            setenv("HOME", filesDir);
-            setenv("ANDROID_DATA", filesDir);
-            setenv("ANDROID_CACHE", cacheDir);
-            setenv("GARRYSMOD_PATH", externalFiles + "/garrysmod");
-            setenv("CHROMIUM_PATH", chromiumManager.getChromiumDir().getAbsolutePath());
+	static public void initNatives(Context context, Intent intent) {
+		mPref = context.getSharedPreferences("mod", 0);
+		ApplicationInfo appinf = context.getApplicationInfo();
+		String gamepath = mPref.getString("gamepath", LauncherActivity.getDefaultDir() + "/srceng");
 
-            String args = "-basedir " + externalFiles
-                + " -game garrysmod"
-                + " -console -novid -nojoy -noipx";
-            setArgs(args);
+		String argv = intent.getStringExtra("argv");
+		String gamedir = intent.getStringExtra("gamedir");
+		String gamelibdir = intent.getStringExtra("gamelibdir");
+		String customVPK = intent.getStringExtra("vpk");
+		Log.v("SRCAPK", "argv="+argv);
 
-            Log.i(TAG, "Engine path: " + externalFiles);
-            Log.i(TAG, "Chromium path: " + chromiumManager.getChromiumDir());
-        } catch (UnsatisfiedLinkError e) {
-            Log.e(TAG, "JNI call failed (native libs not loaded): " + e.getMessage());
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to set env: " + e.getMessage());
-        }
-    }
+		if( gamedir == null || gamedir.isEmpty() )
+			gamedir = "hl2";
 
-    private void promptChromiumDownload() {
-        new AlertDialog.Builder(this)
-            .setTitle("Chromium Browser")
-            .setMessage("Download Chromium for in-game browser support?\n\n" +
-                "This is optional. The game works without it, but some server features may be limited.\n\n" +
-                "Size: ~500 MB")
-            .setPositiveButton("Download", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    downloadChromiumAndStart();
-                }
-            })
-            .setNegativeButton("Skip", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    startEngine();
-                }
-            })
-            .setCancelable(false)
-            .show();
-    }
+		if( argv == null || argv.isEmpty() )
+			argv = mPref.getString("argv", "-console");
 
-    private void downloadChromiumAndStart() {
-        final TextView statusText = new TextView(this);
-        statusText.setText("Downloading Chromium...");
-        statusText.setPadding(48, 32, 48, 32);
-        statusText.setTextColor(0xFFFFFFFF);
-        statusText.setTextSize(18);
-        setContentView(statusText);
+		argv = "-game "+gamedir+" "+argv;
 
-        chromiumManager.downloadChromium(new ChromiumManager.Callback() {
-            @Override
-            public void onProgress(String message) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        statusText.setText(message);
-                    }
-                });
-            }
+		if( gamelibdir != null && !gamelibdir.isEmpty() )
+			setenv( "APP_MOD_LIB", gamelibdir, 1 );
 
-            @Override
-            public void onComplete(boolean success) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (isFinishing() || isDestroyed()) {
-                            return;
-                        }
-                        if (success) {
-                            Log.i(TAG, "Chromium download complete");
-                        } else {
-                            Log.w(TAG, "Chromium download incomplete - running without it");
-                        }
-                        startEngine();
-                    }
-                });
-            }
-        });
-    }
+		ExtractAssets.extractVPK(context, false);
 
-    private void startEngine() {
-        if (!nativeLibsLoaded) {
-            new AlertDialog.Builder(this)
-                .setTitle("Engine Error")
-                .setMessage("Failed to load native engine libraries. The game cannot start.\n\nPlease reinstall the app or check that all .so files are present.")
-                .setPositiveButton("Exit", (dialog, which) -> finish())
-                .setCancelable(false)
-                .show();
-            return;
-        }
-        view = new GModView(this);
-        setContentView(view);
-        hideSystemUI();
-    }
+		String vpks = context.getFilesDir().getPath()+"/"+ExtractAssets.VPK_NAME;
+		if( customVPK != null && !customVPK.isEmpty() )
+			vpks = customVPK+","+vpks;
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (view != null) {
-            view.onResume();
-        }
-        hideSystemUI();
-    }
+		Log.v("SRCAPK", "vpks="+vpks);
 
-    @Override
-    protected void onPause() {
-        if (view != null) {
-            view.onPause();
-        }
-        super.onPause();
-    }
+		setenv( "EXTRAS_VPK_PATH", vpks, 1 );
+		setenv( "LANG", Locale.getDefault().toString(), 1 );
+		setenv( "APP_DATA_PATH", appinf.dataDir, 1);
+		setenv( "APP_LIB_PATH", appinf.nativeLibraryDir, 1);
 
-    @Override
-    protected void onDestroy() {
-        if (view != null) {
-            view.onDestroy();
-        }
-        super.onDestroy();
-    }
+		if (mPref.getBoolean("rodir", false))
+			setenv( "VALVE_GAME_PATH", LauncherActivity.getAndroidDataDir(), 1 );
+		else
+			setenv( "VALVE_GAME_PATH", gamepath, 1 );
 
-    @Override
-    public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-        if (hasFocus) {
-            hideSystemUI();
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, android.content.Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        try {
-            nativeOnActivityResult(requestCode, resultCode, data);
-        } catch (UnsatisfiedLinkError e) {
-            Log.e(TAG, "nativeOnActivityResult failed (native libs not loaded): " + e.getMessage());
-        } catch (Exception e) {
-            Log.e(TAG, "nativeOnActivityResult failed: " + e.getMessage());
-        }
-    }
-
-    private void hideSystemUI() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            getWindow().setDecorFitsSystemWindows(false);
-            WindowInsetsController controller = getWindow().getInsetsController();
-            if (controller != null) {
-                controller.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
-                controller.setSystemBarsBehavior(
-                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                );
-            }
-        } else {
-            View decorView = getWindow().getDecorView();
-            decorView.setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_FULLSCREEN
-            );
-        }
-    }
+		Log.v("SRCAPK", "argv="+argv);
+		setArgs(argv);
+	}
 }

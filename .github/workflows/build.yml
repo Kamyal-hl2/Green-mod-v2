@@ -282,7 +282,7 @@ jobs:
         run: |
           mkdir -p artifacts
           echo "runtime-download-required" > artifacts/chromium-status.txt
-          echo "Chromium .so files are downloaded at first launch by ChromiumManager"
+          echo "Chromium .so files (if any) are downloaded at first launch by the engine"
           ls -lh artifacts/
 
       - name: Upload
@@ -368,10 +368,19 @@ jobs:
 
       - name: Prepare garrysmod assets
         run: |
-          mkdir -p launcher/src/main/assets/garrysmod
-          cp -r garrysmod/garrysmod/* launcher/src/main/assets/garrysmod/ 2>/dev/null || true
-          echo "=== Assets size ==="
-          du -sh launcher/src/main/assets/garrysmod/
+          # extras_dir.vpk is shipped in launcher/src/main/assets/ (committed, ~25MB)
+          # and is extracted by ExtractAssets.extractVPK at first launch.
+          # Additional garrysmod content (lua/gamemodes/addons) is optional and
+          # only copied here if present in the repo's garrysmod/ tree.
+          ls -lh launcher/src/main/assets/ 2>/dev/null || true
+          if [ -d garrysmod/garrysmod ]; then
+            mkdir -p launcher/src/main/assets/garrysmod
+            cp -r garrysmod/garrysmod/* launcher/src/main/assets/garrysmod/ 2>/dev/null || true
+            echo "=== garrysmod assets size ==="
+            du -sh launcher/src/main/assets/garrysmod/
+          else
+            echo "garrysmod/ tree not present in repo; engine will read it from the user-set gamepath at runtime"
+          fi
 
       - name: Setup Gradle Wrapper
         working-directory: launcher
