@@ -335,25 +335,26 @@ jobs:
         run: |
           set -e
 
-          # armeabi-v7a: CI-built + fallback to prebuilt from repo
-          mkdir -p launcher/src/main/jniLibs/armeabi-v7a
-          cp engine-armv7a/*.so launcher/src/main/jniLibs/armeabi-v7a/ 2>/dev/null || true
-          ARMV7A_COUNT=$(ls launcher/src/main/jniLibs/armeabi-v7a/*.so 2>/dev/null | wc -l)
-          echo "armv7a from CI: ${ARMV7A_COUNT} .so files"
-          if [ "$ARMV7A_COUNT" -lt 10 ]; then
-            echo "CI armv7a produced few .so, using prebuilt fallback from engine/lib/android/arm/"
-            cp engine/lib/android/arm/*.so launcher/src/main/jniLibs/armeabi-v7a/ 2>/dev/null || true
-          fi
+          # NOTE: build.gradle already pulls .so from engine/lib/<abi>/ and
+          # engine/lib/android/<arm|aarch64>/ via jniLibs.srcDirs, so even an
+          # empty launcher/src/main/jniLibs/ produces a working APK. The jniLibs/
+          # dir below is only used to OVERRIDE prebuilts with freshly CI-built .so.
 
-          # arm64-v8a: CI-built + fallback to prebuilt from repo
+          # armeabi-v7a: CI-built override + prebuilt fallback (combined)
+          mkdir -p launcher/src/main/jniLibs/armeabi-v7a
+          cp engine/lib/android/arm/*.so        launcher/src/main/jniLibs/armeabi-v7a/ 2>/dev/null || true
+          cp engine/lib/armeabi-v7a/*.so        launcher/src/main/jniLibs/armeabi-v7a/ 2>/dev/null || true
+          cp engine-armv7a/*.so                 launcher/src/main/jniLibs/armeabi-v7a/ 2>/dev/null || true
+          ARMV7A_COUNT=$(ls launcher/src/main/jniLibs/armeabi-v7a/*.so 2>/dev/null | wc -l)
+          echo "armv7a total (prebuilt+CI): ${ARMV7A_COUNT} .so files"
+
+          # arm64-v8a: CI-built override + prebuilt fallback (combined)
           mkdir -p launcher/src/main/jniLibs/arm64-v8a
-          cp engine-arm64/*.so launcher/src/main/jniLibs/arm64-v8a/ 2>/dev/null || true
+          cp engine/lib/android/aarch64/*.so    launcher/src/main/jniLibs/arm64-v8a/ 2>/dev/null || true
+          cp engine/lib/arm64-v8a/*.so          launcher/src/main/jniLibs/arm64-v8a/ 2>/dev/null || true
+          cp engine-arm64/*.so                  launcher/src/main/jniLibs/arm64-v8a/ 2>/dev/null || true
           ARM64_COUNT=$(ls launcher/src/main/jniLibs/arm64-v8a/*.so 2>/dev/null | wc -l)
-          echo "arm64 from CI: ${ARM64_COUNT} .so files"
-          if [ "$ARM64_COUNT" -lt 10 ]; then
-            echo "CI arm64 produced few .so, using prebuilt fallback from engine/lib/android/aarch64/"
-            cp engine/lib/android/aarch64/*.so launcher/src/main/jniLibs/arm64-v8a/ 2>/dev/null || true
-          fi
+          echo "arm64 total (prebuilt+CI): ${ARM64_COUNT} .so files"
 
           ARMV7A_FINAL=$(ls launcher/src/main/jniLibs/armeabi-v7a/*.so 2>/dev/null | wc -l)
           ARM64_FINAL=$(ls launcher/src/main/jniLibs/arm64-v8a/*.so 2>/dev/null | wc -l)
@@ -363,6 +364,10 @@ jobs:
 
           if [ "$ARMV7A_FINAL" -eq 0 ]; then
             echo "ERROR: No armv7a .so files found!"
+            exit 1
+          fi
+          if [ "$ARM64_FINAL" -eq 0 ]; then
+            echo "ERROR: No arm64 .so files found!"
             exit 1
           fi
 

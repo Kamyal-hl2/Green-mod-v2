@@ -42,6 +42,25 @@ android {
         }
     }
 
+    sourceSets {
+        main {
+            // Native shared libraries are picked up from two locations:
+            //   1. launcher/src/main/jniLibs/<abi>/   — manual overrides / CI-built artifacts
+            //   2. ../engine/lib/<abi>/               — prebuilt engine .so (libengine, libclient,
+            //                                          libtier0, libSDL2, libserver, ...)
+            // ../engine/lib/android/<arm|aarch64>/ is intentionally NOT listed here because its
+            // subdir names ("arm", "aarch64") are not standard ABI names ("armeabi-v7a",
+            // "arm64-v8a"); it only contains static libs + a duplicate libSDL2.so and is merged
+            // into jniLibs/ by the CI workflow instead.
+            // Without this the APK is missing libSDL2.so / libengine.so / etc. and crashes at
+            //   System.loadLibrary("SDL2") with: dlopen failed: library "libSDL2.so" not found
+            jniLibs.srcDirs = [
+                'src/main/jniLibs',
+                '../engine/lib'
+            ]
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
